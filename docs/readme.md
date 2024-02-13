@@ -1,0 +1,1 @@
+# This directory should hold all documents produced in the project
