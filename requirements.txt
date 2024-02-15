@@ -4,3 +4,5 @@ numpy
 BART_SURVIVAL
 pymc
 pymc_bart
+lifelines
+scikit-survival 

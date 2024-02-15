@@ -1,6 +1,0 @@
-# Todo file for the paper
-
-1. Set up git repo *    
-2. set up venv *
-3. outline abstract
-4. set up mlflow
