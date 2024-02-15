@@ -1,2 +1,12 @@
 All One-Off notes, code or doc specific can be kept here
 
+### venv
+python3 -m venv .venv
+source .paper_venv/bin/activate
+
+### git
+- add remote https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories 
+
+
+### mlflow
+pip install mlflow
