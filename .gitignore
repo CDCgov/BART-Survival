@@ -1,3 +1,4 @@
 .paper_venv/
 mlruns/
 */__pycache__/
+data/
