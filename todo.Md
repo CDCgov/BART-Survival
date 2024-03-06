@@ -4,7 +4,7 @@
 2. ~~set up venv~~
 3. ~~outline abstract~~
 4. ~~set up mlflow ~~
-5. write simuation function 
+5. ~~write simuation function~~
 6. write model functions
    1. BART function
    2. rBART function

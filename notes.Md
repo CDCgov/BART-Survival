@@ -18,3 +18,6 @@ mlflow.set_tracking_uri(uri="http://<host>:<port>")
 mlflow.set_experiment("experiment_name")
 mlflow.start_run("run_name")
 ```
+
+# notes
+1. quantiles of evaluation are based off the simulated event times, not the true survival curve. This allows comparison at the .1, .25, .5, .75, .9 quantiles represented by the the event times. The idea is that this will reduce sparsity due to the random sample event times.

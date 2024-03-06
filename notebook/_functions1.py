@@ -292,6 +292,7 @@ def sim_2s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
     cens_perc = event_dict["status"][event_dict["status"] == 0].shape[0]/event_dict["status"].shape[0]
     # get uniq times and quantiles as indexes
     uniq_t = np.unique(event_dict["t_event"]) 
+    
     qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
     true_t = sv_true["true_times"]
     
