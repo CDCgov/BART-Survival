@@ -22,3 +22,6 @@
    2. RHAT
    3. Credible Interval Length
    4. Coverage Probability
+
+
+<!-- Update package simulation so t_max set to t_event -->
