@@ -21,5 +21,3 @@ sv.cih = apply(post$surv.test, 2, quantile, probs=0.975)
 df_out = data.frame(sv.mu, sv.cil, sv.cih)
 write.csv(df_out, "../data/exp1_tmp_out2.csv", row.names=F)
 
-
-str(post)
