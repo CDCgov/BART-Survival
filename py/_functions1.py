@@ -255,7 +255,11 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
     sv_1 = pb_sb_sub(sv_prob, 0)
     sv_2 = pb_sb_sub(sv_prob, 1)
     uniq_t = BSM.uniq_times
+    
     del BSM
+    childs = mp.active_children()
+    for child in childs:
+        child.kill()
     return sv_1, sv_2, uniq_t
 
 def get_r_bart2(event_dict, x_mat):
