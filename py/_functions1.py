@@ -152,6 +152,7 @@ def get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict):
     sv_m = sv_prob["sv"].mean(1).mean(0)
     uniq_t = BSM.uniq_times
     sv_q = np.quantile(sv_prob["sv"].mean(1), [0.025,0.975], axis=0)
+    del BSM
     return (sv_m, sv_q), uniq_t
 
 def get_r_bart1(event_dict, x_mat):
@@ -241,6 +242,7 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
     sv_1 = pb_sb_sub(sv_prob, 0)
     sv_2 = pb_sb_sub(sv_prob, 1)
     uniq_t = BSM.uniq_times
+    del BSM
     return sv_1, sv_2, uniq_t
 
 def get_r_bart2(event_dict, x_mat):
