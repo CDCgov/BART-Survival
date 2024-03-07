@@ -128,7 +128,9 @@ def save_to_csv(event_dict, x_mat, file="exp1_tmp.csv"):
     ),columns= col)
     exp_name = file
     path = f"../data/{exp_name}"
-    df.to_csv(path,index = False)
+    with open(path, 'w') as f:
+        df.to_csv(f, index=False)
+    # df.to_csv(path,index = False)
 
 
     
@@ -158,7 +160,9 @@ def get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict):
 def get_r_bart1(event_dict, x_mat):
     save_to_csv(event_dict, x_mat)
     subprocess.call("/usr/bin/Rscript --vanilla ../R/bart_1.R", shell=True)
-    r_sv = pd.read_csv("../data/exp1_tmp_out2.csv").values
+    with open("../data/exp1_tmp_out2.csv", "r") as f:
+        r_sv = pd.read_csv(f).values
+    # r_sv = pd.read_csv("../data/exp1_tmp_out2.csv").values
     r_sv_m = r_sv[:,0].T
     r_sv_q = r_sv[:,1:].T
     return r_sv_m, r_sv_q
@@ -248,7 +252,9 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
 def get_r_bart2(event_dict, x_mat):
     save_to_csv(event_dict, x_mat, file="exp2_tmp.csv")
     subprocess.call("/usr/bin/Rscript --vanilla ../R/bart_2.R", shell=True)
-    r_sv = pd.read_csv("../data/exp2_tmp_out2.csv").values
+    with open("../data/exp2_tmp_out2.csv","r") as f:
+        r_sv = pd.read_csv(f).values
+    # r_sv = pd.read_csv("../data/exp2_tmp_out2.csv").values
     msk = r_sv[:,0]==0
     r_sv_m1 = r_sv[msk,1].T
     r_sv_m2 = r_sv[~msk,1].T
