@@ -8,6 +8,8 @@ from bart_survival import simulation as sm
 import lifelines as ll
 from lifelines import KaplanMeierFitter
 import subprocess
+import threading as th
+import multiprocessing as mp
 
 def get_sim(rng, N, type, x_vars, VAR_CLASS, VAR_PROB, scale_f, shape_f, cens_scale):
     """Generates simulation dataest
@@ -145,16 +147,23 @@ def get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict):
     # return post_test, small_post_x, small_coords
 
     BSM = sb.BartSurvModel(model_config=model_dict, sampler_config=sampler_dict)
+
     # fit with just the time column
     BSM.fit(y=trn["y"], X=trn["x"][:,0].reshape(-1,1), weights=trn["w"], coords = trn["coord"], random_seed=99)
-    # test with just the time column
-    # post1 = BSM.sample_posterior_predictive(X_pred=post_test["post_x"][:,0].reshape(-1,1), coords=post_test["coords"])
+    
     post1 = BSM.sample_posterior_predictive(X_pred=small_post_x, coords=small_coords)
     sv_prob = sb.get_sv_prob(post1)
     sv_m = sv_prob["sv"].mean(1).mean(0)
     uniq_t = BSM.uniq_times
     sv_q = np.quantile(sv_prob["sv"].mean(1), [0.025,0.975], axis=0)
     del BSM
+    
+    ###
+    childs = mp.active_children()
+    for child in childs:
+        child.kill()
+        # print(f"CHILD: {child}")
+
     return (sv_m, sv_q), uniq_t
 
 def get_r_bart1(event_dict, x_mat):
