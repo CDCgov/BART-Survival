@@ -168,7 +168,8 @@ def get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict):
 
 def get_r_bart1(event_dict, x_mat):
     save_to_csv(event_dict, x_mat)
-    subprocess.call("/usr/bin/Rscript --vanilla ../R/bart_1.R", shell=True)
+    # subprocess.call("/usr/bin/Rscript --vanilla ../R/bart_1.R", shell=True)
+    subprocess.call("/usr/local/bin/Rscript --vanilla ../R/bart_1.R", shell=True)
     with open("../data/exp1_tmp_out2.csv", "r") as f:
         r_sv = pd.read_csv(f).values
     # r_sv = pd.read_csv("../data/exp1_tmp_out2.csv").values
@@ -264,7 +265,8 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
 
 def get_r_bart2(event_dict, x_mat):
     save_to_csv(event_dict, x_mat, file="exp2_tmp.csv")
-    subprocess.call("/usr/bin/Rscript --vanilla ../R/bart_2.R", shell=True)
+    # subprocess.call("/usr/bin/Rscript --vanilla ../R/bart_2.R", shell=True)
+    subprocess.call("/usr/local/bin/Rscript --vanilla ../R/bart_2.R", shell=True)
     with open("../data/exp2_tmp_out2.csv","r") as f:
         r_sv = pd.read_csv(f).values
     # r_sv = pd.read_csv("../data/exp2_tmp_out2.csv").values

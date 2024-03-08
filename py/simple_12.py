@@ -52,7 +52,7 @@ def main():
         exp_id = ml.set_experiment(exp_name)
     print(exp_id)
     
-    iters = 2
+    iters = 50
     # Cond 1
     SPLIT_RULES1 =  [
         "pmb.ContinuousSplitRule()", 
