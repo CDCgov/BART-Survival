@@ -13,8 +13,11 @@ import _functions1 as fn
 import _conditions1 as cn
 import _plot_fx as pltf
 plt.ioff()
+importlib.reload(pltf)
+importlib.reload(fn)
+importlib.reload(cn)
 
-def iter_simulation_1s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
+def iter_simulation_1s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict):
     """_summary_
 
     Args:
@@ -37,7 +40,11 @@ def iter_simulation_1s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict
     r_sv_lst0 = []
     r_sv_ci_lst0 = []
 
-    for i in range(n, n+iters):
+    
+    strt = n*seed_addl
+    end = strt + iters
+    for i in range(strt, end):
+        print(f"ITERATION************** {i}")
         meta, sv_true, k_sv, pb_sv, r_sv = fn.sim_1s(seed=i, n=n, scenario=scenario, SPLIT_RULES=SPLIT_RULES, model_dict=model_dict, sampler_dict=sampler_dict)
 
         uniq_t = meta[3][0]
@@ -47,12 +54,12 @@ def iter_simulation_1s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict
         assert((true_t[uniq_t-1] == uniq_t).all)
 
         sv_t_0 = sv_true[uniq_t-1]
-        k_sv_0 = k_sv[0][uniq_idx]
-        k_sv_ci0 = k_sv[1][:,uniq_idx]
-        p_sv_0 = pb_sv[0][0][uniq_idx]
-        p_sv_ci0 = pb_sv[0][1][:,uniq_idx]
-        r_sv_0 = r_sv[0][uniq_idx]
-        r_sv_ci0 = r_sv[1][:,uniq_idx]
+        k_sv_0 = k_sv[0]
+        k_sv_ci0 = k_sv[1]
+        p_sv_0 = pb_sv[0][0]
+        p_sv_ci0 = pb_sv[0][1]
+        r_sv_0 = r_sv[0]
+        r_sv_ci0 = r_sv[1]
 
         meta_lst.append(meta)
         sv_true_lst0.append(sv_t_0)
@@ -77,9 +84,9 @@ def iter_simulation_1s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict
         r_sv_ci_lst0
     )
     cens = np.array([m[0] for m in meta_lst]).mean()
-    return meta_lst,cens, k,p,r, fig
+    return meta_lst, (strt, end), cens, k,p,r, fig
 
-def iter_simulation_2s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
+def iter_simulation_2s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict):
     """_summary_
 
     Args:
@@ -110,7 +117,10 @@ def iter_simulation_2s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict
     r_sv_lst1 = []
     r_sv_ci_lst1 = []
 
-    for i in range(n, n+iters):
+    strt = n*seed_addl
+    end = strt + iters
+    for i in range(strt, end):
+        print(f"ITERATION************** {i}")
         meta, sv_true, k_sv, pb_sv, r_sv = fn.sim_2s(i, n, scenario, SPLIT_RULES, model_dict, sampler_dict)
         
         uniq_t = meta[3][0]
@@ -122,20 +132,26 @@ def iter_simulation_2s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict
         sv_t_0 = sv_true[0][uniq_t-1]
         sv_t_1 = sv_true[1][uniq_t-1]
 
-        k_sv_0 = k_sv[0][0][uniq_idx]
-        k_sv_1 = k_sv[1][0][uniq_idx]
-        k_sv_ci0 = k_sv[0][1][:,uniq_idx]
-        k_sv_ci1 = k_sv[1][1][:,uniq_idx]
+        k_sv_0 = k_sv[0][0]
+        k_sv_1 = k_sv[1][0]
+        k_sv_ci0 = k_sv[0][1]
+        k_sv_ci1 = k_sv[1][1]
 
-        p_sv_0 = pb_sv[0][0][uniq_idx]
-        p_sv_1 = pb_sv[1][0][uniq_idx]
-        p_sv_ci0 = pb_sv[0][1][:,uniq_idx]
-        p_sv_ci1 = pb_sv[1][1][:,uniq_idx]
+        print(sv_t_0)
+        
+        p_sv_0 = pb_sv[0][0]
+        p_sv_1 = pb_sv[1][0]
+        p_sv_ci0 = pb_sv[0][1]
+        p_sv_ci1 = pb_sv[1][1]
 
-        r_sv_0 = r_sv[0][0][uniq_idx]
-        r_sv_1 = r_sv[1][0][uniq_idx]
-        r_sv_ci0 = r_sv[0][1][:,uniq_idx]
-        r_sv_ci1 = r_sv[1][1][:,uniq_idx]
+        r_sv_0 = r_sv[0][0]
+        r_sv_1 = r_sv[1][0]
+        r_sv_ci0 = r_sv[0][1]
+        r_sv_ci1 = r_sv[1][1]
+
+        # print(k_sv_0)
+        # print(p_sv_0)
+        # print(r_sv_0)
 
         meta_lst.append(meta)
         sv_true_lst0.append(sv_t_0)
@@ -145,6 +161,7 @@ def iter_simulation_2s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict
         pb_sv_ci_lst0.append(p_sv_ci0)
         r_sv_lst0.append(r_sv_0)
         r_sv_ci_lst0.append(r_sv_ci0)
+
         sv_true_lst1.append(sv_t_1)
         k_sv_lst1.append(k_sv_1)
         k_sv_ci_lst1.append(k_sv_ci1)
@@ -168,4 +185,4 @@ def iter_simulation_2s(iters, n, scenario, SPLIT_RULES, model_dict, sampler_dict
         r_sv_ci_lst0, r_sv_ci_lst1
     )
     cens = np.array([m[0] for m in meta_lst]).mean()
-    return meta_lst,cens, k,p,r, fig
+    return meta_lst, (strt,end), cens, k,p,r, fig

@@ -4,12 +4,20 @@ import lifelines as ll
 import sksurv as sks
 import matplotlib.pyplot as plt
 from bart_survival import surv_bart as sb
-from bart_survival import simulation as sm
+
 import lifelines as ll
 from lifelines import KaplanMeierFitter
 import subprocess
 import threading as th
 import multiprocessing as mp
+import sys
+sys.path.append("../src/")
+import sim_adj as sm
+
+
+
+
+# from bart_survival import simulation as sm
 
 def get_sim(rng, N, type, x_vars, VAR_CLASS, VAR_PROB, scale_f, shape_f, cens_scale):
     """Generates simulation dataest
@@ -43,6 +51,35 @@ def get_sim(rng, N, type, x_vars, VAR_CLASS, VAR_PROB, scale_f, shape_f, cens_sc
         rng = rng
     )
     return type, x_mat, event_dict, sv_true, sv_scale_true
+
+def get_quant_times(sv_true_c, sv_true, quant=[0.9,0.75,0.5,0.25,0.1]):
+	qnt_t = []
+	for i in quant:
+		tmp = np.abs(sv_true_c - i)
+		idx = tmp == tmp.min()
+		qnt_t.append(sv_true["true_times"][idx])
+	return np.array(qnt_t)
+
+def get_quant_events(qnt_t, event):
+	q = np.array(qnt_t)
+	et_ = event["t_event"].copy()
+	et_out = event["t_event"].copy()
+	es_out = event["status"].copy()
+	for i in range(q.shape[0]):
+		if i == 0:
+			msk = et_<=q[i]
+			et_out[msk] = q[i]
+			# print(np.unique(et_out))
+		else:
+			msk = (q[i-1] < et_) & (et_ <= q[i])
+			et_out[msk] = q[i]
+			# print(np.unique(et_out))
+			if i == q.shape[0]-1:
+				msk = et_ > q[i]
+				et_out[msk] = q[i]
+				es_out[msk] = 0
+
+	return {"t_event":et_out, "status":es_out}
 
 
 def ci_at_times(ci, k_t, uniq_t):
@@ -178,24 +215,24 @@ def get_r_bart1(event_dict, x_mat):
     return r_sv_m, r_sv_q
 
 
-def get_quant_times(uniq_t, uniq=True):
-    """gets the index of quantile values
+# def get_quant_times(uniq_t, uniq=True):
+#     """gets the index of quantile values
 
-    Args:
-        uniq_t (array): Unique values of observed times
-        uniq (bool, optional): Indicator returns just the unique quantiles if values repeat. Defaults to True.
+#     Args:
+#         uniq_t (array): Unique values of observed times
+#         uniq (bool, optional): Indicator returns just the unique quantiles if values repeat. Defaults to True.
 
-    Returns:
-        nd.array: Array of indexes of the quantiles.
-    """
-    qnt_t = np.quantile(uniq_t, [.1, .25, .5, .75, .9], method = "closest_observation")
-    qnt_idx = np.array([(np.abs(uniq_t-i).argmin()) for i in qnt_t])
-    if uniq:
-        qnt_t = np.unique(qnt_t)
-        qnt_idx=np.unique(qnt_idx)
+#     Returns:
+#         nd.array: Array of indexes of the quantiles.
+#     """
+#     qnt_t = np.quantile(uniq_t, [.1, .25, .5, .75, .9], method = "closest_observation")
+#     qnt_idx = np.array([(np.abs(uniq_t-i).argmin()) for i in qnt_t])
+#     if uniq:
+#         qnt_t = np.unique(qnt_t)
+#         qnt_idx=np.unique(qnt_idx)
 
 
-    return qnt_t.astype("int"), qnt_idx.astype("int")
+#     return qnt_t.astype("int"), qnt_idx.astype("int")
 
 
 def sim_1s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
@@ -206,11 +243,20 @@ def sim_1s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
         rng = seed
     # generate survival simulation
     scenario, x_mat, event_dict, sv_true, sv_scale_true = get_sim(rng, n, **scenario)
+    
+	#get mean survival
+    sv_true_mean = sv_true["sv_true"].mean(0)
+    qnt_t = get_quant_times(sv_true_c=sv_true_mean, sv_true= sv_true).flatten()
+    print(qnt_t)
+    event_dict = get_quant_events(qnt_t=qnt_t, event=event_dict)
+
     # type, x_mat, event_dict, sv_true, sv_scale_true = get_sim(rng, N[0], **simple_1_2)
     cens_perc = event_dict["status"][event_dict["status"] == 0].shape[0]/event_dict["status"].shape[0]
-    # get uniq times and quantiles as indexes
+    # print(cens_perc)
+    # return cens_perc
+	# get uniq times and quantiles as indexes
     uniq_t = np.unique(event_dict["t_event"]) 
-    qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
+    # qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
     true_t = sv_true["true_times"]
 
     # singular sv true
@@ -220,12 +266,14 @@ def sim_1s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
     ed0, uniq_t2 = ed_sub(event_dict, x_mat, 1)
     k_sv = twopop_kpm(ed0, uniq_t)
 
+    # return k_sv, x_mat, event_dict
     # fit bart_py
     pb_sv = get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict)
     
     # fit bart_r
     r_sv = get_r_bart1(event_dict, x_mat)
-    return (cens_perc, true_t, uniq_t, (qnt_t, qnt_idx)), sv_true_r0, k_sv, pb_sv, r_sv
+    # return (cens_perc, true_t, uniq_t, (qnt_t, qnt_idx)), sv_true_r0, k_sv, pb_sv, r_sv
+    return (cens_perc, true_t, uniq_t, (qnt_t, qnt_t-1)), sv_true_r0, k_sv, pb_sv, r_sv
 
 
 
@@ -285,12 +333,21 @@ def sim_2s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
         rng = seed
     # generate survival simulation
     scenario, x_mat, event_dict, sv_true, sv_scale_true = get_sim(rng, n, **scenario)
+    
+    #get mean survival
+    sv_true_mean = sv_true["sv_true"].mean(0)
+    qnt_t = get_quant_times(sv_true_c=sv_true_mean, sv_true= sv_true).flatten()
+    print(qnt_t)
+    event_dict = get_quant_events(qnt_t=qnt_t, event=event_dict)
+
+    
     # get the unique x_test
     x_tst, x_tst_idx = np.unique(x_mat, return_index=True)
     cens_perc = event_dict["status"][event_dict["status"] == 0].shape[0]/event_dict["status"].shape[0]
+    
     # get uniq times and quantiles as indexes
     uniq_t = np.unique(event_dict["t_event"]) 
-    qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
+    # qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
     true_t = sv_true["true_times"]
     
     # singular sv true
@@ -310,7 +367,7 @@ def sim_2s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
 
     # fit bart_r
     r_sv = get_r_bart2(event_dict, x_mat)
-    return (cens_perc, true_t, uniq_t, (qnt_t, qnt_idx)),(sv_true_r0, sv_true_r1),(k_sv1, k_sv2), pb_sv, r_sv
+    return (cens_perc, true_t, uniq_t, (qnt_t, qnt_t-1)),(sv_true_r0, sv_true_r1),(k_sv1, k_sv2), pb_sv, r_sv
 
 ################################## Metrics
 def check_array(v):
