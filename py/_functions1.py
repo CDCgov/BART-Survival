@@ -5,6 +5,7 @@ import sksurv as sks
 import matplotlib.pyplot as plt
 from bart_survival import surv_bart as sb
 
+
 import lifelines as ll
 from lifelines import KaplanMeierFitter
 import subprocess
@@ -13,7 +14,7 @@ import multiprocessing as mp
 import sys
 sys.path.append("../src/")
 import sim_adj as sm
-
+# import brt_adj as sb
 
 
 
@@ -293,6 +294,15 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
     small_coords = np.hstack([np.repeat(0, small_post_x.shape[0]), np.repeat(1, small_post_x.shape[0]), ])
     small_post_x = np.vstack([small_post_x, small_post_x])
     small_post_x = np.hstack([small_post_x, xs.reshape(-1,1)])
+    # print(small_post_x)
+    # print(event_dict)
+    # print(trn["x"])
+    # print(trn["y"])
+    # quit()
+    # print(xs)
+    # print(small_post_x)
+    # print(small_coords)
+    # quit()
     # assert False
 
     # return trn, post_test, small_post_x, small_coords
@@ -301,6 +311,9 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
     BSM.fit(y=trn["y"], X=trn["x"], weights=trn["w"], coords = trn["coord"], random_seed=99)
     post1 = BSM.sample_posterior_predictive(X_pred=small_post_x, coords=small_coords)
     sv_prob = sb.get_sv_prob(post1)
+    # print(sv_prob[""].shape)
+    # print(sv_prob)
+    # quit()
     sv_1 = pb_sb_sub(sv_prob, 0)
     sv_2 = pb_sb_sub(sv_prob, 1)
     uniq_t = BSM.uniq_times

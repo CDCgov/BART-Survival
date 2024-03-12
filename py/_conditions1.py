@@ -1,5 +1,6 @@
 #simple
-N = [200,400]
+# N = [200,400]
+
 
 # simple_1_1 = {
 #     "type": "Simple, 1 group, 20% cens",

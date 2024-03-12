@@ -86,7 +86,7 @@ def iter_simulation_1s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, s
     cens = np.array([m[0] for m in meta_lst]).mean()
     return meta_lst, (strt, end), cens, k,p,r, fig
 
-def iter_simulation_2s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict):
+def iter_simulation_2s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict, plot_all=False):
     """_summary_
 
     Args:
@@ -116,6 +116,7 @@ def iter_simulation_2s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, s
     pb_sv_ci_lst1 = []
     r_sv_lst1 = []
     r_sv_ci_lst1 = []
+    figs = []
 
     strt = n*seed_addl
     end = strt + iters
@@ -169,10 +170,17 @@ def iter_simulation_2s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, s
         pb_sv_ci_lst1.append(p_sv_ci1)
         r_sv_lst1.append(r_sv_1)
         r_sv_ci_lst1.append(r_sv_ci1)
+        
+        if plot_all:
+            fig = pltf.plots2(meta, sv_true, k_sv, pb_sv, r_sv)
+            title = f"{scenario['type']} {n}"
+            fig.suptitle(title)
+        figs.append(fig)
 
-    fig = pltf.plots2(meta, sv_true, k_sv, pb_sv, r_sv)
-    title = f"{scenario['type']} {n}"
-    fig.suptitle(title)
+    if plot_all==False:
+        fig = pltf.plots2(meta, sv_true, k_sv, pb_sv, r_sv)
+        title = f"{scenario['type']} {n}"
+        fig.suptitle(title)
     
 
     k, p, r = fn.get_metrics2(
@@ -185,4 +193,7 @@ def iter_simulation_2s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, s
         r_sv_ci_lst0, r_sv_ci_lst1
     )
     cens = np.array([m[0] for m in meta_lst]).mean()
+    
+    if plot_all:
+        return meta_lst, (strt,end), cens, k,p,r, figs
     return meta_lst, (strt,end), cens, k,p,r, fig

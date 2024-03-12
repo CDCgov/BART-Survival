@@ -1,23 +1,24 @@
 EXP_NAME = "test3"
-RUN_NAME = "run1_100"
+RUN_NAME = "run_t2_200_1"
 
 ###########################
 # ITERATIONS
-ITERS = 100
-SEED_ADDL=2
+ITERS = 200
+SEED_ADDL=13
+N = [200, 400]
 ###########################
 # Cond 1
 SPLIT_RULES1 =  [
 	"pmb.ContinuousSplitRule()", 
 ]
-MODEL_DICT1 = {"trees": 40,
+MODEL_DICT1 = {"trees": 15,
 	"split_rules": SPLIT_RULES1
 }
 SAMPLER_DICT1 = {
-	"draws": 620,
-	"tune": 30,
-	"cores": 3,
-	"chains": 3,
+	"draws": 500,
+	"tune": 100,
+	"cores": 4,
+	"chains": 4,
 	"compute_convergence_checks": False
 }
 
@@ -25,15 +26,18 @@ SAMPLER_DICT1 = {
 # Cond 2
 SPLIT_RULES2 =  [
 	"pmb.ContinuousSplitRule()", 
-	"pmb.OneHotSplitRule()"
+	# "pmb.OneHotSplitRule()"	
+	"pmb.ContinuousSplitRule()"
 ]
-MODEL_DICT2 = {"trees": 40,
-	"split_rules": SPLIT_RULES2
+MODEL_DICT2 = {"trees": 60,
+	"split_rules": SPLIT_RULES2,
+	# "split_prior":[10,10]
 }
 SAMPLER_DICT2 = {
-	"draws": 620,
-	"tune": 30,
-	"cores": 3,
-	"chains": 3,
+	"draws": 900,
+	"tune": 10,
+	"cores": 5,
+	"chains": 5,
 	"compute_convergence_checks": False
 }
+PLOT_ALL=True
