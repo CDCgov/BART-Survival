@@ -216,25 +216,6 @@ def get_r_bart1(event_dict, x_mat):
     return r_sv_m, r_sv_q
 
 
-# def get_quant_times(uniq_t, uniq=True):
-#     """gets the index of quantile values
-
-#     Args:
-#         uniq_t (array): Unique values of observed times
-#         uniq (bool, optional): Indicator returns just the unique quantiles if values repeat. Defaults to True.
-
-#     Returns:
-#         nd.array: Array of indexes of the quantiles.
-#     """
-#     qnt_t = np.quantile(uniq_t, [.1, .25, .5, .75, .9], method = "closest_observation")
-#     qnt_idx = np.array([(np.abs(uniq_t-i).argmin()) for i in qnt_t])
-#     if uniq:
-#         qnt_t = np.unique(qnt_t)
-#         qnt_idx=np.unique(qnt_idx)
-
-
-#     return qnt_t.astype("int"), qnt_idx.astype("int")
-
 
 def sim_1s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
     # set rng as seed given
@@ -381,6 +362,105 @@ def sim_2s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
     # fit bart_r
     r_sv = get_r_bart2(event_dict, x_mat)
     return (cens_perc, true_t, uniq_t, (qnt_t, qnt_t-1)),(sv_true_r0, sv_true_r1),(k_sv1, k_sv2), pb_sv, r_sv
+
+#############################################################
+def get_py_bart_surv3(x_mat, event_dict, model_dict, sampler_dict):
+    y_sk = sb.get_y_sklearn(status = event_dict["status"], t_event=event_dict["t_event"])
+    trn = sb.get_surv_pre_train(y_sk = y_sk, x_sk = x_mat, weight=None)
+    post_test = sb.get_posterior_test(y_sk = y_sk, x_test = x_mat)
+    # small_post_x = np.unique(post_test["post_x"][:,0]).reshape(-1,1)
+    # xs = np.hstack([np.repeat(0, small_post_x.shape[0]), np.repeat(1, small_post_x.shape[0])])
+    # small_coords = np.hstack([np.repeat(0, small_post_x.shape[0]), np.repeat(1, small_post_x.shape[0]), ])
+    # small_post_x = np.vstack([small_post_x, small_post_x])
+    # small_post_x = np.hstack([small_post_x, xs.reshape(-1,1)])
+    # print(small_post_x)
+    # print(event_dict)
+    # print(trn["x"])
+    # print(trn["y"])
+    # quit()
+    # print(xs)
+    # print(small_post_x)
+    # print(small_coords)
+    # quit()
+    # assert False
+    # return post_test
+
+    # return trn, post_test, small_post_x, small_coords
+    BSM = sb.BartSurvModel(model_config=model_dict, sampler_config=sampler_dict)
+    # fit with just the time column
+    BSM.fit(y=trn["y"], X=trn["x"], weights=trn["w"], coords = trn["coord"], random_seed=99)
+    post1 = BSM.sample_posterior_predictive(X_pred=post_test["post_x"], coords=post_test["coords"])
+    sv_prob = sb.get_sv_prob(post1)
+    # print(sv_prob[""].shape)
+    # print(sv_prob)
+    # quit()
+    # sv_1 = pb_sb_sub(sv_prob, 0)
+    # sv_2 = pb_sb_sub(sv_prob, 1)
+    uniq_t = BSM.uniq_times
+    
+    del BSM
+    childs = mp.active_children()
+    for child in childs:
+        child.kill()
+    return sv_prob, uniq_t
+
+def cox_ph(x_mat, event_dict):
+    cph = ll.CoxPHFitter()
+    q = np.hstack([event_dict["t_event"].reshape(-1,1),event_dict["status"].reshape(-1,1),x_mat]) 
+    col = ["T", "E"] + [f"x_{i}" for i in range(x_mat.shape[1])] 
+    q = pd.DataFrame(q, columns=col)
+
+    cph.fit(q , "T", "E")
+    cph_sv = cph.predict_survival_function(x_mat).to_numpy().T
+    # return the exp coef and ci
+
+def sim_3s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
+    # set rng as seed given
+    if type(seed) is int:
+        rng = np.random.default_rng(seed)
+    else:
+        rng = seed
+    # generate survival simulation
+    scenario, x_mat, event_dict, sv_true, sv_scale_true = get_sim(rng, n, **scenario)
+    cens_perc = event_dict["status"][event_dict["status"] == 0].shape[0]/event_dict["status"].shape[0]
+    
+    #get mean survival
+    # sv_true_mean = sv_true["sv_true"].mean(0)
+    # qnt_t = get_quant_times(sv_true_c=sv_true_mean, sv_true= sv_true).flatten()
+    sv_true_q25 = np.quantile(sv_true["sv_true"], [0.1], axis = 0).flatten()
+    sv_true_q75 = np.quantile(sv_true["sv_true"], [0.9], axis = 0).flatten()
+    # return sv_true_q25, sv_true_q75
+    qnt_t25 = get_quant_times(sv_true_c=sv_true_q25, sv_true= sv_true, quant=[.9, 0.75,0.5,0.25, .1]).flatten()
+    qnt_t75 = get_quant_times(sv_true_c=sv_true_q75, sv_true= sv_true, quant=[.9, 0.75,0.5,0.25, .1]).flatten()
+    qnt_t = np.unique(np.hstack([qnt_t25, qnt_t75]))
+    
+    event_dict = get_quant_events(qnt_t=qnt_t, event=event_dict)
+    # return qnt_t, event_dict, sv_true, x_mat
+    
+    # get the unique x_test
+    x_tst, x_tst_idx = np.unique(x_mat, return_index=True)
+    cens_perc2 = event_dict["status"][event_dict["status"] == 0].shape[0]/event_dict["status"].shape[0]        
+
+    # return cens_perc, cens_perc2, qnt_t
+    
+    # get uniq times and quantiles as indexes
+    uniq_t = np.unique(event_dict["t_event"]) 
+    # qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
+    true_t = sv_true["true_times"]
+    
+    # fit kpm    
+    cph_sv = cox_ph(x_mat, event_dict)
+    
+    # return k_sv1, k_sv2
+
+    # fit bart_py
+    # pb_sv = get_py_bart_surv3(x_mat=x_mat, event_dict=event_dict, model_dict=model_dict, sampler_dict=sampler_dict)
+    return x_mat, event_dict, sv_true
+    
+    # fit bart_r
+    # r_sv = get_r_bart2(event_dict, x_mat)
+    # return (cens_perc, true_t, uniq_t, (qnt_t, qnt_t-1)),(sv_true_r0, sv_true_r1),(k_sv1, k_sv2), pb_sv, r_sv
+
 
 ################################## Metrics
 def check_array(v):
