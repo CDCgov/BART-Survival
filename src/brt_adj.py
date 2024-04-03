@@ -84,11 +84,11 @@ class BartSurvModel():
 			self.model.add_coord("p_obs", coords, mutable=True)
 			x_data = pm.MutableData("x_data", self.X, dims=("p_obs", "xvars"))
 			w = pm.MutableData("weights", self.weights)
-			y_data = pm.MutableData("y_data", self.y.flatten()) # new
+			# y_data = pm.MutableData("y_data", self.y.flatten()) # new
 			# off = pm.MutableData("offset", off)
 			# change names of y_values
-			f = pmb.BART("f", X=x_data, Y=y_data m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR) # new
-			# f = pmb.BART("f", X=x_data, Y=self.y.flatten(), m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR)
+			# f = pmb.BART("f", X=x_data, Y=y_data, m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR) # new
+			f = pmb.BART("f", X=x_data, Y=self.y.flatten(), m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR)
 			z = pm.Deterministic("z", (f))
 			# z = pm.Deterministic("z", (f + off))
 			# z = pm.Deterministic("z", (f + self.offset))
