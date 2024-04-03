@@ -78,33 +78,23 @@ class BartSurvModel():
 		def dist_bern(mu, w, size):
 			return pm.Bernoulli.dist(mu, size=size)
 		
-  # offset
-		tmp_x = self.X[:,0].copy()
-		tmp_off = []
-		tmp_i = []
-		for i in np.unique(tmp_x):
-			y_mu = self.y.flatten()[tmp_x == i].mean()
-			tmp_off.append(y_mu)
-			tmp_i.append(i)
-		self.tmp_off = tmp_off
-		off = tmp_x.copy()
-		for i in range(len(tmp_off)):
-			msk = tmp_x == tmp_i[i]
-			off[msk] = tmp_off[i]
 		mcoords = {"xvars":self.predictor_names}
-
+		print("new version")
 		with pm.Model(coords=mcoords) as self.model:    
 			self.model.add_coord("p_obs", coords, mutable=True)
 			x_data = pm.MutableData("x_data", self.X, dims=("p_obs", "xvars"))
 			w = pm.MutableData("weights", self.weights)
-			off = pm.MutableData("offset", off)
+			y_data = pm.MutableData("y_data", self.y.flatten()) # new
+			# off = pm.MutableData("offset", off)
 			# change names of y_values
-			f = pmb.BART("f", X=x_data, Y=self.y.flatten(), m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR)
-			# z = pm.Deterministic("z", (f))
-			z = pm.Deterministic("z", (f + off))
+			f = pmb.BART("f", X=x_data, Y=y_data m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR) # new
+			# f = pmb.BART("f", X=x_data, Y=self.y.flatten(), m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR)
+			z = pm.Deterministic("z", (f))
+			# z = pm.Deterministic("z", (f + off))
 			# z = pm.Deterministic("z", (f + self.offset))
 			mu = pm.Deterministic("mu", pm.math.invprobit(z), dims=("p_obs"))
-			pm.CustomDist("y_pred", mu, w.flatten(), dist=dist_bern, logp=logp_bern, observed=self.y.flatten(), shape = x_data.shape[0])            
+			# pm.CustomDist("y_pred", mu, w.flatten(), dist=dist_bern, logp=logp_bern, observed=self.y.flatten(), shape = x_data.shape[0])            
+			pm.Bernoulli("y_pred", mu, observed = self.y.flatten(), shape = x_data.shape[0])
 
 	def sample_model(
 		self, 
@@ -223,15 +213,15 @@ class BartSurvModel():
 		if not self.is_fitted_:
 			raise RuntimeError("Model is not fitted in this instance. Either refit or predict with bart_predict")
 		
-		off = X_pred[:,0].copy().flatten()
-		for i in range(len(self.uniq_times)):
-			msk = (X_pred[:,0] == self.uniq_times[i]).flatten()
-			off[msk] = self.tmp_off[i]
+		# off = X_pred[:,0].copy().flatten()
+		# for i in range(len(self.uniq_times)):
+		# 	msk = (X_pred[:,0] == self.uniq_times[i]).flatten()
+		# 	off[msk] = self.tmp_off[i]
 		
 			
 		with self.model:  # sample with new input data
 			pm.set_data({"x_data":X_pred} , coords={"p_obs":coords})
-			pm.set_data({"offset":off})
+			# pm.set_data({"offset":off})
 			post_pred = pm.sample_posterior_predictive(self.idata, var_names=["mu"],**kwargs)
 			if extend_idata:
 				self.idata.extend(post_pred)

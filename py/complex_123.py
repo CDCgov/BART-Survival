@@ -7,12 +7,15 @@ import importlib
 import mlflow as ml
 
 import _conditions2 as cn
-import _functions2 as fn
-import _sim_iter1 as si
+import _functions1 as fn
+import _sim_iter2 as si
 import _loggers1 as lo
-import _param1 as prm
+import _param2 as prm
 import time
 
+# TODO  add in the figures
+# add in the other settings
+# test w/ multiple iterations
 
 def main():
     ##########################
@@ -33,32 +36,34 @@ def main():
     ml.log_dict({"iters":prm.ITERS}, "iters.json")
     ml.log_dict({"seed_addl":prm.SEED_ADDL}, "seed_addl.json")
 
+    # should only be one N loop as N==400
     for N in prm.N:
     # for N in [200]:
  
         ############################################################
-        # cond 2_1
+        # complex1
         if True:
             strt_time = time.time()
-            meta, seeds, cens,k,p,r,fig = si.iter_simulation_2s(
+            meta, seeds, cens,k,p,r, fig = si.iter_simulation_complex1(
                 iters=prm.ITERS, 
                 n=N,
                 seed_addl=prm.SEED_ADDL,
-                scenario= cn.simple_2_1, 
-                SPLIT_RULES=prm.SPLIT_RULES2, 
-                model_dict=prm.MODEL_DICT2,
-                sampler_dict=prm.SAMPLER_DICT2,
+                scenario= cn.complex_1, 
+                SPLIT_RULES=prm.SPLIT_RULES1, 
+                model_dict=prm.MODEL_DICT1,
+                sampler_dict=prm.SAMPLER_DICT1,
                 plot_all=prm.PLOT_ALL
             )
-            lo.log_params("2_1", N, cn.simple_2_1, prm.MODEL_DICT2, prm.SAMPLER_DICT2, seeds)
-            lo.log_mets("2_1", N, cens, k, p, r)
+            lo.log_params("cmplx1", N, cn.complex_1, prm.MODEL_DICT1, prm.SAMPLER_DICT1, seeds)
+            lo.log_mets2("cmplx1", N, cens, k, p, r)
 
+            # probs don't need to log
             if prm.PLOT_ALL:
                 for f in range(len(fig)):
                     if f in [0,1,2,3]:
-                        lo.log_figures(f"2_1_{f}", N, fig[f])
+                        lo.log_figures(f"cmplx_1_{f}", N, fig[f])
             else:
-                lo.log_figures("2_1",N,fig)
+                lo.log_figures("cmplx_1",N,fig[0])
 
             end_time = time.time()-strt_time
             tname = f"time_3_{N}.json"

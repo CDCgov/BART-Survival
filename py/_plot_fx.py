@@ -94,3 +94,35 @@ def plots2(
     ax[0].legend()
     ax[1].legend()
     return fig
+
+def plots3(
+    qnt_t,
+    # qnt_idx,
+    sv_true,
+    cph_sv,
+    pb_sv,
+    r_sv,
+    figsize=(16,8)
+):
+
+    fig, ax = plt.subplots(1,3,figsize=figsize)
+    i = 0
+    ax[0].step(qnt_t, sv_true[i,:], color="black", label="true", where="mid",alpha=0.5)
+    ax[1].step(qnt_t, sv_true[i,:], color="black", label="true", where="mid",alpha=0.5)
+    ax[2].step(qnt_t, sv_true[i,:], color="black", label="true", where="mid",alpha=0.5)
+    ax[0].step(qnt_t, cph_sv[i,:], color="red", label="cph", where="mid",alpha=0.5)
+    ax[1].step(qnt_t, pb_sv[i,:], color="blue", label="pbart", where="mid",alpha=0.5)
+    ax[2].step(qnt_t, r_sv[i,:], color="green", label="rbart", where="mid",alpha=0.5)
+    for i in range(1,100):
+        ax[0].step(qnt_t, sv_true[i,:], color="black", where="mid",alpha=0.5)
+        ax[1].step(qnt_t, sv_true[i,:], color="black", where="mid",alpha=0.5)
+        ax[2].step(qnt_t, sv_true[i,:], color="black", where="mid",alpha=0.5)
+        ax[0].step(qnt_t, cph_sv[i,:], color="red", where="mid",alpha=0.5)
+        ax[1].step(qnt_t, pb_sv[i,:], color="blue", where="mid",alpha=0.5)
+        ax[2].step(qnt_t, r_sv[i,:], color="green", where="mid",alpha=0.5)
+       
+
+    ax[0].legend()
+    ax[1].legend()
+    ax[2].legend()
+    return fig
