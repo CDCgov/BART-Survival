@@ -9,7 +9,7 @@ complex_1 = {
     # "scale_f": "2.5*x_mat[:,0]",
     "scale_f": "np.exp(3 + 0.1*(x_mat[:,0] + x_mat[:,1] + x_mat[:,2] + x_mat[:,3] + x_mat[:,4] + x_mat[:,5]) + x_mat[:,6])",
     "shape_f": "2",
-    "cens_scale":None
+    "cens_scale":3.5
 }
 
 complex_2 = {

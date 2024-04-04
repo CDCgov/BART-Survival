@@ -42,7 +42,7 @@ def main():
  
         ############################################################
         # complex1
-        if True:
+        if False:
             strt_time = time.time()
             meta, seeds, cens,k,p,r, fig = si.iter_simulation_complex1(
                 iters=prm.ITERS, 
@@ -66,37 +66,66 @@ def main():
                 lo.log_figures("cmplx_1",N,fig[0])
 
             end_time = time.time()-strt_time
-            tname = f"time_3_{N}.json"
+            tname = f"cmplx_1_time_{N}.json"
             ml.log_dict({"time":end_time}, tname)
-            print("DONE SIMPLE_2_1")
+            print("DONE complex 1")
         ############################################################
-        #cond 2_2
+        #complex 2
         if False:
             strt_time = time.time()
-            meta, seeds, cens,k,p,r,fig = si.iter_simulation_2s(
+            meta, seeds, cens,k,p,r, fig = si.iter_simulation_complex1(
                 iters=prm.ITERS, 
                 n=N,
                 seed_addl=prm.SEED_ADDL,
-                scenario= cn.simple_2_2, 
+                scenario= cn.complex_2, 
                 SPLIT_RULES=prm.SPLIT_RULES2, 
-                model_dict=prm.MODEL_DICT2, 
+                model_dict=prm.MODEL_DICT2,
                 sampler_dict=prm.SAMPLER_DICT2,
                 plot_all=prm.PLOT_ALL
             )
-            lo.log_params("2_1", N, cn.simple_2_2, prm.MODEL_DICT2, prm.SAMPLER_DICT2, seeds)
-            lo.log_mets("2_2", N, cens, k, p, r)
-            
+            lo.log_params("cmplx2", N, cn.complex_2, prm.MODEL_DICT2, prm.SAMPLER_DICT2, seeds)
+            lo.log_mets2("cmplx2", N, cens, k, p, r)
+
+            # probs don't need to log
             if prm.PLOT_ALL:
                 for f in range(len(fig)):
                     if f in [0,1,2,3]:
-                        lo.log_figures(f"2_2_{f}", N, fig[f])
+                        lo.log_figures(f"cmplx_2_{f}", N, fig[f])
             else:
-                lo.log_figures("2_2",N,fig)
-                
+                lo.log_figures("cmplx_2",N,fig[0])
+
             end_time = time.time()-strt_time
-            tname = f"time_4_{N}.json"
+            tname = f"cmplx_2_time_{N}.json"
             ml.log_dict({"time":end_time}, tname)
-            print("DONE SIMPLE_2_2")
+            print("DONE complex 2")
+
+        if True:
+            strt_time = time.time()
+            meta, seeds, cens,k,p,r, fig = si.iter_simulation_complex2(
+                iters=prm.ITERS, 
+                n=N,
+                seed_addl=prm.SEED_ADDL,
+                scenario= cn.complex_3, 
+                SPLIT_RULES=prm.SPLIT_RULES3, 
+                model_dict=prm.MODEL_DICT3,
+                sampler_dict=prm.SAMPLER_DICT3,
+                plot_all=prm.PLOT_ALL
+            )
+            lo.log_params("cmplx3", N, cn.complex_3, prm.MODEL_DICT3, prm.SAMPLER_DICT3, seeds)
+            lo.log_mets2("cmplx3", N, cens, k, p, r)
+
+            # probs don't need to log
+            if prm.PLOT_ALL:
+                for f in range(len(fig)):
+                    if f in [0,1,2,3]:
+                        lo.log_figures(f"cmplx_3_{f}", N, fig[f])
+            else:
+                lo.log_figures("cmplx_3",N,fig[0])
+
+            end_time = time.time()-strt_time
+            tname = f"cmplx_3_time_{N}.json"
+            ml.log_dict({"time":end_time}, tname)
+            print("DONE complex 3")
 
     ml.end_run()
 

@@ -3,3 +3,4 @@ mlruns/
 */__pycache__/
 data/
 .vscode
+figs/
