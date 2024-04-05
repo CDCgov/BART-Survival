@@ -4,3 +4,4 @@ mlruns/
 data/
 .vscode
 figs/
+sv_data/

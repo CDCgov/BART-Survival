@@ -126,3 +126,17 @@ def plots3(
     ax[1].legend()
     ax[2].legend()
     return fig
+
+def plots3_3(sv_t_0,cph_sv, pb_sv,r_sv, sv_t_tst_0, cph_sv_tst, pb_sv_tst, qs=1,qe=-1):
+    fig, ax = plt.subplots(1,5, figsize = (40,8))
+    ax[0].scatter(sv_t_0[:,qs:qe].flatten(), cph_sv[:,qs:qe].flatten(),s=0.1, color = "red", label = "cph")
+    ax[0].legend()
+    ax[1].scatter(sv_t_0[:,qs:qe].flatten(), pb_sv[:,qs:qe].flatten(),s=0.1, color="green", label="p")
+    ax[1].legend()
+    ax[2].scatter(sv_t_0[:,qs:qe].flatten(), r_sv[:,qs:qe].flatten(),s=0.1, color = "blue", label = "r")    
+    ax[2].legend()
+    ax[3].scatter(sv_t_tst_0[:,qs:qe].flatten(), cph_sv_tst[:,qs:qe].flatten(),s=0.1, color = "red", label="cph_tst")
+    ax[3].legend()
+    ax[4].scatter(sv_t_tst_0[:,qs:qe].flatten(), pb_sv_tst[:,qs:qe].flatten(),s=0.1, color = "green", label = "p_tst")
+    ax[4].legend()
+    return fig

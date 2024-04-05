@@ -96,7 +96,7 @@ def iter_simulation_complex1(iters, n, seed_addl, scenario, SPLIT_RULES, model_d
 
 
 # this is for continuous complex
-def iter_simulation_complex2(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict, plot_all):
+def iter_simulation_complex3(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict, plot_all):
     """_summary_
 
     Args:
@@ -121,7 +121,9 @@ def iter_simulation_complex2(iters, n, seed_addl, scenario, SPLIT_RULES, model_d
     end = strt + iters
     for i in range(strt, end):
         print(f"ITERATION************** {i}")
-        meta, sv_true, cph_sv, pb_sv, r_sv = fn.sim_3s(seed=i, n=n, scenario_=scenario, SPLIT_RULES=SPLIT_RULES, model_dict=model_dict, sampler_dict=sampler_dict)
+        # new simulation 3_2 is for the complex regression
+        # changes the decile selection
+        meta, sv_true, cph_sv, pb_sv, r_sv, sv_true_tst, cph_sv_tst, pb_sv_tst = fn.sim_3_2s(seed=i, n=n, scenario_=scenario, SPLIT_RULES=SPLIT_RULES, model_dict=model_dict, sampler_dict=sampler_dict)
 
         uniq_t = meta["qnt_t"][0]
         uniq_idx = meta["qnt_t"][1]
@@ -130,19 +132,87 @@ def iter_simulation_complex2(iters, n, seed_addl, scenario, SPLIT_RULES, model_d
         assert((true_t[uniq_idx] == uniq_t).all)
 
         sv_t_0 = sv_true["sv_true"][:,uniq_idx] # this is obs
+        sv_t_tst_0 = sv_true_tst["sv_true"][:,uniq_idx] # this is obs
         cph_sv_0 = cph_sv # this is obs
+        cph_sv_tst_0 = cph_sv_tst
         p_sv_0 = pb_sv # this is already the mean, this is obs
+        p_sv_tst_0 = pb_sv_tst
         r_sv_0 = r_sv # this is already the mean, this is obs
-        # there is a unsafe error that can occur if the sim event times don't map 1:1 to the qnt_times
-        # this occurs if like the 95% t is 2 and the minimum event time is 4.
         assert(sv_t_0.shape == cph_sv_0.shape == p_sv_0.shape == r_sv_0.shape)    
 
-        meta_lst.append(meta)
-        sv_true_lst0.append(sv_t_0)
-        cph_sv_lst0.append(cph_sv_0)
-        pb_sv_lst0.append(p_sv_0)
-        r_sv_lst0.append(r_sv_0)
+        # meta_lst.append(meta)
+        # sv_true_lst0.append(sv_t_0)
+        # cph_sv_lst0.append(cph_sv_0)
+        # pb_sv_lst0.append(p_sv_0)
+        # r_sv_lst0.append(r_sv_0)
+        figs = pltf.plots3_3(
+            sv_t_0, cph_sv_0, p_sv_0, r_sv_0, sv_t_tst_0, cph_sv_tst_0, p_sv_tst_0,
+            qs=1, qe=-3
+        )
+        tttl = scenario["type"]
+        namesss = f"../sv_data/{tttl}_{n}_{i}.png"
+        figs.savefig(namesss)
 
+        df = pd.DataFrame(
+            np.hstack(
+            [
+                sv_t_0[:,1:-1].flatten().reshape(-1,1),
+                cph_sv[:,1:-1].flatten().reshape(-1,1),
+                pb_sv[:,1:-1].flatten().reshape(-1,1),
+                r_sv[:,1:-1].flatten().reshape(-1,1),
+                sv_t_tst_0[:,1:-1].flatten().reshape(-1,1),
+                cph_sv_tst[:,1:-1].flatten().reshape(-1,1),
+                pb_sv_tst[:,1:-1].flatten().reshape(-1,1)
+            ]
+            ),
+            columns = ["sv_t", "cph","pb","r","sv_tst","cph_tst","pb_tst"]
+        )
+        tttl = scenario["type"]
+        namesss = f"../sv_data/{tttl}_{n}_{i}.csv"
+        df.to_csv(namesss)
+
+
+        # get metrics
+        def rsqr(true, est):
+            SSR = np.sum(np.power(true - est, 2))
+            SST = np.sum(np.power(true - np.mean(true), 2))
+            return 1-(SSR/SST)
+
+        def medabs(true, est):
+            mab = np.median(np.abs(true-est))
+            return mab
+
+        def msqr(true, est):
+            msqr = np.sqrt(np.mean(np.power(true-est,2)))
+            return msqr
+        
+        qs,qe = 2,-4
+        c_rsqr = rsqr(sv_t_0[:,qs:qe], cph_sv_0[:,qs:qe])
+        p_rsqr = rsqr(sv_t_0[:,qs:qe], p_sv_0[:,qs:qe])
+        r_rsqr = rsqr(sv_t_0[:,qs:qe], r_sv_0[:,qs:qe])
+        c_tst_rsqr = rsqr(sv_t_tst_0[:,qs:qe], cph_sv_tst[:,qs:qe])
+        p_tst_rsqr = rsqr(sv_t_tst_0[:,qs:qe], p_sv_tst_0[:,qs:qe])
+        
+        c_medabs = medabs(sv_t_0[:,qs:qe], cph_sv_0[:,qs:qe])
+        p_medabs = medabs(sv_t_0[:,qs:qe], p_sv_0[:,qs:qe])
+        r_medabs = medabs(sv_t_0[:,qs:qe], r_sv_0[:,qs:qe])
+        c_tst_medabs = medabs(sv_t_tst_0[:,qs:qe], cph_sv_tst[:,qs:qe])
+        p_tst_medabs = medabs(sv_t_tst_0[:,qs:qe], p_sv_tst_0[:,qs:qe])
+
+        c_msqr = msqr(sv_t_0[:,qs:qe], cph_sv_0[:,qs:qe])
+        p_msqr = msqr(sv_t_0[:,qs:qe], p_sv_0[:,qs:qe])
+        r_msqr = msqr(sv_t_0[:,qs:qe], r_sv_0[:,qs:qe])
+        c_tst_msqr = msqr(sv_t_tst_0[:,qs:qe], cph_sv_tst[:,qs:qe])
+        p_tst_msqr = msqr(sv_t_tst_0[:,qs:qe], p_sv_tst_0[:,qs:qe])
+
+        c = {"q":(qs,qe), "r2":c_rsqr.tolist(), "mabs":c_medabs.tolist(), "rmse":c_msqr.tolist()}
+        p = {"q":(qs,qe), "r2":p_rsqr.tolist(), "mabs":p_medabs.tolist(), "rmse":p_msqr.tolist()}
+        r = {"q":(qs,qe), "r2":r_rsqr.tolist(), "mabs":r_medabs.tolist(), "rmse":r_msqr.tolist()}
+        c_tst = {"q":(qs,qe), "r2":c_tst_rsqr.tolist(), "mabs":c_tst_medabs.tolist(), "rmse":c_tst_msqr.tolist()}
+        p_tst = {"q":(qs,qe), "r2":p_tst_rsqr.tolist(), "mabs":p_tst_medabs.tolist(), "rmse":p_tst_msqr.tolist()}
+
+        cens1 = meta["cens_perc"]
+        cens2 = meta["cens_perc2"]
         # if plot_all:
         #     fig = pltf.plots3(uniq_t, sv_t_0, cph_sv_0, p_sv_0, r_sv_0)
         #     title = f"{scenario['type']}, n {n}"
@@ -153,246 +223,23 @@ def iter_simulation_complex2(iters, n, seed_addl, scenario, SPLIT_RULES, model_d
         #         namesss = f"../figs/{ttl}_{i}.png"
         #         fig.savefig(namesss)
     
-    if not plot_all:
-        fig = pltf.plots3(meta, sv_t_0, cph_sv_0, p_sv_0, r_sv_0)
-        title = f"{scenario['type']}, n {n}"
-        fig.suptitle(title)
-        fig_l.append(fig)
+    # if not plot_all:
+    #     fig = pltf.plots3(meta, sv_t_0, cph_sv_0, p_sv_0, r_sv_0)
+    #     title = f"{scenario['type']}, n {n}"
+    #     fig.suptitle(title)
+    #     fig_l.append(fig)
 
-    c,p,r = fn.get_metrics3(
-        sv_true_lst0,
-        cph_sv_lst0,
-        pb_sv_lst0,
-        r_sv_lst0,
-    )
-    cens1 = [m["cens_perc"] for m in meta_lst]
-    cens2 = [m["cens_perc2"] for m in meta_lst]
+    # c,p,r = fn.get_metrics3(
+    #     sv_true_lst0,
+    #     cph_sv_lst0,
+    #     pb_sv_lst0,
+    #     r_sv_lst0,
+    # )
+    # cens1 = [m["cens_perc"] for m in meta_lst]
+    # print(f"censs {cens1}")
+    # cens2 = [m["cens_perc2"] for m in meta_lst]
     # cens1 = np.array([m["cens_perc"] for m in meta_lst]).mean()
     # cens2 = np.array([m["cens_perc2"] for m in meta_lst]).mean()
     
-    return meta_lst, (strt, end), (cens1,cens2), c,p,r, fig_l
+    return meta_lst, (strt, end), (cens1,cens2), c,p,r, c_tst, p_tst
 
-# def iter_simulation_2s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict, plot_all=False):
-#     """_summary_
-
-#     Args:
-#         iters (_type_): _description_
-#         n (_type_): _description_
-#         scenario (_type_): _description_
-#         SPLIT_RULES (_type_): _description_
-#         model_dict (_type_): _description_
-#         sampler_dict (_type_): _description_
-
-#     Returns:
-#         _type_: _description_
-#     """
-#     meta_lst = []
-#     sv_true_lst0 = []
-#     k_sv_lst0 = []
-#     k_sv_ci_lst0 = []
-#     pb_sv_lst0 = []
-#     pb_sv_ci_lst0 = []
-#     r_sv_lst0 = []
-#     r_sv_ci_lst0 = []
-
-#     sv_true_lst1 = []
-#     k_sv_lst1 = []
-#     k_sv_ci_lst1 = []
-#     pb_sv_lst1 = []
-#     pb_sv_ci_lst1 = []
-#     r_sv_lst1 = []
-#     r_sv_ci_lst1 = []
-#     figs = []
-
-#     strt = n*seed_addl
-#     end = strt + iters
-#     for i in range(strt, end):
-#         print(f"ITERATION************** {i}")
-#         meta, sv_true, k_sv, pb_sv, r_sv = fn.sim_2s(i, n, scenario, SPLIT_RULES, model_dict, sampler_dict)
-        
-#         uniq_t = meta[3][0]
-#         uniq_idx = meta[3][1]
-
-#         true_t = meta[1]
-#         assert((true_t[uniq_t-1] == uniq_t).all)
-
-#         sv_t_0 = sv_true[0][uniq_t-1]
-#         sv_t_1 = sv_true[1][uniq_t-1]
-
-#         k_sv_0 = k_sv[0][0]
-#         k_sv_1 = k_sv[1][0]
-#         k_sv_ci0 = k_sv[0][1]
-#         k_sv_ci1 = k_sv[1][1]
-
-#         print(sv_t_0)
-        
-#         p_sv_0 = pb_sv[0][0]
-#         p_sv_1 = pb_sv[1][0]
-#         p_sv_ci0 = pb_sv[0][1]
-#         p_sv_ci1 = pb_sv[1][1]
-
-#         r_sv_0 = r_sv[0][0]
-#         r_sv_1 = r_sv[1][0]
-#         r_sv_ci0 = r_sv[0][1]
-#         r_sv_ci1 = r_sv[1][1]
-
-#         # print(k_sv_0)
-#         # print(p_sv_0)
-#         # print(r_sv_0)
-
-#         meta_lst.append(meta)
-#         sv_true_lst0.append(sv_t_0)
-#         k_sv_lst0.append(k_sv_0)
-#         k_sv_ci_lst0.append(k_sv_ci0)
-#         pb_sv_lst0.append(p_sv_0)
-#         pb_sv_ci_lst0.append(p_sv_ci0)
-#         r_sv_lst0.append(r_sv_0)
-#         r_sv_ci_lst0.append(r_sv_ci0)
-
-#         sv_true_lst1.append(sv_t_1)
-#         k_sv_lst1.append(k_sv_1)
-#         k_sv_ci_lst1.append(k_sv_ci1)
-#         pb_sv_lst1.append(p_sv_1)
-#         pb_sv_ci_lst1.append(p_sv_ci1)
-#         r_sv_lst1.append(r_sv_1)
-#         r_sv_ci_lst1.append(r_sv_ci1)
-        
-#         if plot_all:
-#             fig = pltf.plots2(meta, sv_true, k_sv, pb_sv, r_sv)
-#             title = f"{scenario['type']} {n}"
-#             fig.suptitle(title)
-#         figs.append(fig)
-
-#     if plot_all==False:
-#         fig = pltf.plots2(meta, sv_true, k_sv, pb_sv, r_sv)
-#         title = f"{scenario['type']} {n}"
-#         fig.suptitle(title)
-    
-
-#     k, p, r = fn.get_metrics2(
-#         sv_true_lst0, sv_true_lst1,
-#         k_sv_lst0, k_sv_lst1,
-#         k_sv_ci_lst0, k_sv_ci_lst1,
-#         pb_sv_lst0, pb_sv_lst1,
-#         pb_sv_ci_lst0, pb_sv_ci_lst1,
-#         r_sv_lst0, r_sv_lst1,
-#         r_sv_ci_lst0, r_sv_ci_lst1
-#     )
-#     cens = np.array([m[0] for m in meta_lst]).mean()
-    
-#     if plot_all:
-#         return meta_lst, (strt,end), cens, k,p,r, figs
-#     return meta_lst, (strt,end), cens, k,p,r, fig
-
-# def iter_simulation_3s(iters, n, seed_addl, scenario, SPLIT_RULES, model_dict, sampler_dict, plot_all=False):
-#     """_summary_
-
-#     Args:
-#         iters (_type_): _description_
-#         n (_type_): _description_
-#         scenario (_type_): _description_
-#         SPLIT_RULES (_type_): _description_
-#         model_dict (_type_): _description_
-#         sampler_dict (_type_): _description_
-
-#     Returns:
-#         _type_: _description_
-#     """
-#     meta_lst = []
-#     sv_true_lst0 = []
-#     k_sv_lst0 = []
-#     k_sv_ci_lst0 = []
-#     pb_sv_lst0 = []
-#     pb_sv_ci_lst0 = []
-#     r_sv_lst0 = []
-#     r_sv_ci_lst0 = []
-
-#     sv_true_lst1 = []
-#     k_sv_lst1 = []
-#     k_sv_ci_lst1 = []
-#     pb_sv_lst1 = []
-#     pb_sv_ci_lst1 = []
-#     r_sv_lst1 = []
-#     r_sv_ci_lst1 = []
-#     figs = []
-
-#     strt = n*seed_addl
-#     end = strt + iters
-#     for i in range(strt, end):
-#         print(f"ITERATION************** {i}")
-#         meta, sv_true, k_sv, pb_sv, r_sv = fn.sim_2s(i, n, scenario, SPLIT_RULES, model_dict, sampler_dict)
-        
-#         # return meta, sv_true, k_sv, pb_sv, r_sv
-#         uniq_t = meta[3][0]
-#         uniq_idx = meta[3][1]
-
-#         true_t = meta[1]
-#         assert((true_t[uniq_t-1] == uniq_t).all)
-
-#         sv_t_0 = sv_true[0][uniq_t-1]
-#         sv_t_1 = sv_true[1][uniq_t-1]
-
-#         k_sv_0 = k_sv[0][0]
-#         k_sv_1 = k_sv[1][0]
-#         k_sv_ci0 = k_sv[0][1]
-#         k_sv_ci1 = k_sv[1][1]
-
-#         print(sv_t_0)
-        
-#         p_sv_0 = pb_sv[0][0]
-#         p_sv_1 = pb_sv[1][0]
-#         p_sv_ci0 = pb_sv[0][1]
-#         p_sv_ci1 = pb_sv[1][1]
-
-#         r_sv_0 = r_sv[0][0]
-#         r_sv_1 = r_sv[1][0]
-#         r_sv_ci0 = r_sv[0][1]
-#         r_sv_ci1 = r_sv[1][1]
-
-#         # print(k_sv_0)
-#         # print(p_sv_0)
-#         # print(r_sv_0)
-
-#         meta_lst.append(meta)
-#         sv_true_lst0.append(sv_t_0)
-#         k_sv_lst0.append(k_sv_0)
-#         k_sv_ci_lst0.append(k_sv_ci0)
-#         pb_sv_lst0.append(p_sv_0)
-#         pb_sv_ci_lst0.append(p_sv_ci0)
-#         r_sv_lst0.append(r_sv_0)
-#         r_sv_ci_lst0.append(r_sv_ci0)
-
-#         sv_true_lst1.append(sv_t_1)
-#         k_sv_lst1.append(k_sv_1)
-#         k_sv_ci_lst1.append(k_sv_ci1)
-#         pb_sv_lst1.append(p_sv_1)
-#         pb_sv_ci_lst1.append(p_sv_ci1)
-#         r_sv_lst1.append(r_sv_1)
-#         r_sv_ci_lst1.append(r_sv_ci1)
-        
-#         if plot_all:
-#             fig = pltf.plots2(meta, sv_true, k_sv, pb_sv, r_sv)
-#             title = f"{scenario['type']} {n}"
-#             fig.suptitle(title)
-#         figs.append(fig)
-
-#     if plot_all==False:
-#         fig = pltf.plots2(meta, sv_true, k_sv, pb_sv, r_sv)
-#         title = f"{scenario['type']} {n}"
-#         fig.suptitle(title)
-    
-
-#     k, p, r = fn.get_metrics2(
-#         sv_true_lst0, sv_true_lst1,
-#         k_sv_lst0, k_sv_lst1,
-#         k_sv_ci_lst0, k_sv_ci_lst1,
-#         pb_sv_lst0, pb_sv_lst1,
-#         pb_sv_ci_lst0, pb_sv_ci_lst1,
-#         r_sv_lst0, r_sv_lst1,
-#         r_sv_ci_lst0, r_sv_ci_lst1
-#     )
-#     cens = np.array([m[0] for m in meta_lst]).mean()
-    
-#     if plot_all:
-#         return meta_lst, (strt,end), cens, k,p,r, figs
-#     return meta_lst, (strt,end), cens, k,p,r, fig

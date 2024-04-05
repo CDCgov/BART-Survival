@@ -42,6 +42,26 @@ def log_mets2(name, n, cens, k, p, r):
     oname = f"{name}_{n}_met_r.json"
     ml.log_dict(r, oname)
 
+def log_mets3(name, n, cens, c, p, r, c_tst, p_tst):
+    cens = {"cens_retrieved":cens}
+    oname = f"{name}_{n}_cens.json"
+    ml.log_dict(cens, oname)
+    c = dict([(i,c[i]) for i in c.keys()])
+    oname = f"{name}_{n}_met_c.json"
+    ml.log_dict(c, oname)
+    p = dict([(i,p[i]) for i in p.keys()])
+    oname = f"{name}_{n}_met_p.json"
+    ml.log_dict(p, oname)
+    r = dict([(i,r[i]) for i in r.keys()])
+    oname = f"{name}_{n}_met_r.json"
+    ml.log_dict(r, oname)
+    c_tst = dict([(i,c_tst[i]) for i in c_tst.keys()])
+    oname = f"{name}_{n}_met_c_tsts.json"
+    ml.log_dict(c_tst, oname)
+    p_tst = dict([(i,p_tst[i]) for i in p_tst.keys()])
+    oname = f"{name}_{n}_met_p_tst.json"
+    ml.log_dict(p_tst, oname)
+
 def log_figures(name, n, fig):
     oname = f"{name}_{n}.png"
     ml.log_figure(fig, oname)

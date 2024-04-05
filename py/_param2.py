@@ -1,11 +1,14 @@
 EXP_NAME = "cmplx"
 RUN_NAME = "cmplx_1_400_200_2_test"
+RUN_NAME_cmplx3 = "cmplx_3_400_2"
 
 ###########################
 # ITERATIONS
-ITERS = 2
-SEED_ADDL=13
+ITERS = 200
+SEED_ADDL=99
 N = [400]
+N_cmplx3 = [400, 1000, 4000]
+ITERS_cmplx3 = 3
 PLOT_ALL=True
 ###########################
 
