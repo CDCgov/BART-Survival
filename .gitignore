@@ -5,3 +5,4 @@ data/
 .vscode
 figs/
 sv_data/
+docs/*docx
