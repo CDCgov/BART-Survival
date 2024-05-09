@@ -174,7 +174,16 @@ def save_to_csv(event_dict, x_mat, file="exp1_tmp.csv"):
         df.to_csv(f, index=False)
     # df.to_csv(path,index = False)
 
-
+def get_hdi_ci_1(pb_sv):
+    s1 = pb_sv["sv"].shape[0]
+    s2 = pb_sv["sv"].shape[1]
+    s3 = pb_sv["sv"].shape[2]
+    hdi_pre = az.convert_to_dataset(pb_sv["sv"].reshape(1,s1,s2,s3))
+    #low-high
+    hdi_lh = az.hdi(hdi_pre, hdi_prob=.95).x.values
+    # low-high
+    ci_lh = np.quantile(pb_sv["sv"], [0.025, 0.975], 0)
+    return hdi_lh, ci_lh
     
 def get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict):
     y_sk = sb.get_y_sklearn(status = event_dict["status"], t_event=event_dict["t_event"])
@@ -204,7 +213,8 @@ def get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict):
         child.kill()
         # print(f"CHILD: {child}")
 
-    return (sv_m, sv_q), uniq_t
+    # return (sv_m, sv_q), uniq_t
+    return sv_prob, uniq_t
 
 def get_r_bart1(event_dict, x_mat):
     save_to_csv(event_dict, x_mat)
@@ -231,20 +241,20 @@ def sim_1s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
 	#get mean survival
     sv_true_mean = sv_true["sv_true"].mean(0)
     qnt_t = get_quant_times(sv_true_c=sv_true_mean, sv_true= sv_true).flatten()
-    print(qnt_t)
+    print(f"qnut_t: {qnt_t}")
     event_dict = get_quant_events(qnt_t=qnt_t, event=event_dict)
-
-    # type, x_mat, event_dict, sv_true, sv_scale_true = get_sim(rng, N[0], **simple_1_2)
     cens_perc = event_dict["status"][event_dict["status"] == 0].shape[0]/event_dict["status"].shape[0]
-    # print(cens_perc)
-    # return cens_perc
+
 	# get uniq times and quantiles as indexes
     uniq_t = np.unique(event_dict["t_event"]) 
+    print(f"unique_t: {uniq_t}")
+
     # qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
     true_t = sv_true["true_times"]
 
     # singular sv true
     sv_true_r0 = sv_true["sv_true"][0,:]
+    sv_true_u = sv_true_r0[uniq_t.astype("int")-1]
     
     # fit kpm
     ed0, uniq_t2 = ed_sub(event_dict, x_mat, 1)
@@ -252,12 +262,25 @@ def sim_1s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
 
     # return k_sv, x_mat, event_dict
     # fit bart_py
-    pb_sv = get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict)
-    
+    # pb_sv = get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict)
+    pb_sv,  uniq_t = get_py_bart_surv(x_mat, event_dict, model_dict, sampler_dict)
+    pb_sv_m = pb_sv["sv"].mean(1).mean(0)
+    hdi, ci = get_hdi_ci_1(pb_sv)
+    # print(hdi)
+    # print(ci)
+
     # fit bart_r
     r_sv = get_r_bart1(event_dict, x_mat)
-    # return (cens_perc, true_t, uniq_t, (qnt_t, qnt_idx)), sv_true_r0, k_sv, pb_sv, r_sv
-    return (cens_perc, true_t, uniq_t, (qnt_t, qnt_t-1)), sv_true_r0, k_sv, pb_sv, r_sv
+    # return (cens_perc, true_t, uniq_t, (qnt_t, qnt_idx)), sv_true_r0, k_sv, pb_sv, r_sv    
+    return {"cens_perc":cens_perc, 
+            "uniq_t":uniq_t, 
+            "sv_true_u":sv_true_u,
+            "pb_sv_m":pb_sv_m, 
+            "pb_hdi":hdi[0].T, 
+            "pb_ci":ci[:,0,:], 
+            "r_sv":r_sv, 
+            "k_sv":k_sv
+            }
 
 
 
@@ -268,6 +291,17 @@ def pb_sb_sub(sv_prob, msk):
     sv_q = np.quantile(sv_prob["sv"][:,msk,:], [0.025,0.975], axis=0)    
     return sv_m, sv_q
 
+def get_hdi_ci_2(pb_sv):
+    s1 = pb_sv["sv"].shape[0]
+    s2 = pb_sv["sv"].shape[1]
+    s3 = pb_sv["sv"].shape[2]
+    hdi_pre = az.convert_to_dataset(pb_sv["sv"].reshape(1,s1,s2,s3))
+    #low-high
+    hdi_lh = az.hdi(hdi_pre, hdi_prob=.95).x.values
+    # low-high
+    ci_lh = np.quantile(pb_sv["sv"], [0.025, 0.975], 0)
+    return hdi_lh, ci_lh
+
 def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
     y_sk = sb.get_y_sklearn(status = event_dict["status"], t_event=event_dict["t_event"])
     trn = sb.get_surv_pre_train(y_sk = y_sk, x_sk = x_mat, weight=None)
@@ -277,16 +311,6 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
     small_coords = np.hstack([np.repeat(0, small_post_x.shape[0]), np.repeat(1, small_post_x.shape[0]), ])
     small_post_x = np.vstack([small_post_x, small_post_x])
     small_post_x = np.hstack([small_post_x, xs.reshape(-1,1)])
-    # print(small_post_x)
-    # print(event_dict)
-    # print(trn["x"])
-    # print(trn["y"])
-    # quit()
-    # print(xs)
-    # print(small_post_x)
-    # print(small_coords)
-    # quit()
-    # assert False
 
     # return trn, post_test, small_post_x, small_coords
     BSM = sb.BartSurvModel(model_config=model_dict, sampler_config=sampler_dict)
@@ -300,12 +324,15 @@ def get_py_bart_surv2(x_mat, event_dict, model_dict, sampler_dict):
     sv_1 = pb_sb_sub(sv_prob, 0)
     sv_2 = pb_sb_sub(sv_prob, 1)
     uniq_t = BSM.uniq_times
+    hdi_lh, ci_lh = get_hdi_ci_2(sv_prob)
+    hdi_1 = hdi_lh[0].T
+    hdi_2 = hdi_lh[1].T
     
     del BSM
     childs = mp.active_children()
     for child in childs:
         child.kill()
-    return sv_1, sv_2, uniq_t
+    return (sv_1[0], sv_1[1], hdi_1), (sv_2[0], sv_2[1], hdi_2), uniq_t
 
 def get_r_bart2(event_dict, x_mat):
     save_to_csv(event_dict, x_mat, file="exp2_tmp.csv")
@@ -343,12 +370,16 @@ def sim_2s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
     
     # get uniq times and quantiles as indexes
     uniq_t = np.unique(event_dict["t_event"]) 
+    print(uniq_t)
+    
     # qnt_t, qnt_idx = get_quant_times(uniq_t, uniq = False)
     true_t = sv_true["true_times"]
     
     # singular sv true
     sv_true_r0 = sv_true["sv_true"][int(x_tst_idx[0]),:]
+    sv_true_r0 = sv_true_r0[qnt_t.astype("int") - 1]
     sv_true_r1 = sv_true["sv_true"][int(x_tst_idx[1]),:]
+    sv_true_r1 = sv_true_r1[qnt_t.astype("int") - 1]
     
     # fit kpm    
     ed1, uniq_t1 = ed_sub(event_dict, x_mat, 0)
@@ -356,14 +387,23 @@ def sim_2s(seed, n, scenario, SPLIT_RULES, model_dict, sampler_dict):
     k_sv1 = twopop_kpm(ed1, uniq_t)
     k_sv2 = twopop_kpm(ed2, uniq_t)
     
-    # return k_sv1, k_sv2
-
     # fit bart_py
     pb_sv = get_py_bart_surv2(x_mat=x_mat, event_dict=event_dict, model_dict=model_dict, sampler_dict=sampler_dict)
 
     # fit bart_r
     r_sv = get_r_bart2(event_dict, x_mat)
-    return (cens_perc, true_t, uniq_t, (qnt_t, qnt_t-1)),(sv_true_r0, sv_true_r1),(k_sv1, k_sv2), pb_sv, r_sv
+
+    return {"cens_perc":cens_perc, 
+        "uniq_t":uniq_t, 
+        "sv_true_u":(sv_true_r0, sv_true_r1),
+        "pb_sv":pb_sv, 
+        # "pb_hdi":hdi[0].T, 
+        # "pb_ci":ci[:,0,:], 
+        "r_sv":r_sv, 
+        "k_sv":(k_sv1, k_sv2)
+        }
+
+    # return (cens_perc, true_t, uniq_t, (qnt_t, qnt_t-1)),(sv_true_r0, sv_true_r1),(k_sv1, k_sv2), pb_sv, r_sv
 
 # complex 1,2
 #############################################################
@@ -758,8 +798,9 @@ def coverage(true, ci_est, calc = True):
     true = check_array(true)
     ci_est = check_array(ci_est)
 
-    l = ci_est[:,0,:]
-    u = ci_est[:,1,:]
+    l = np.round(ci_est[:,0,:],4)
+    u = np.round(ci_est[:,1,:],4)
+    true = np.round(true, 4)
     out = []
     for i in range(true.shape[1]):
         z = (l[:,i] <= true[:,i]) & (true[:,i] <= u[:,i])
@@ -777,19 +818,33 @@ def iv_length(ci_est):
     out = u-l
     return out.mean(0)
 
-def apply_metrics1(true0, est0, est_ci0):
+def apply_metrics1(true0, est0, est_ci0, est_hdi0=None):
     rmse0 = rmse(true0, est0)
     bias0 = bias(true0, est0)
 
-    cov0 = coverage(true0, est_ci0, calc=True)
-    ivl0 = iv_length(est_ci0)
-    return {"rmse":rmse0, "bias":bias0, "cov":cov0, "ivl":ivl0}
+    if est_hdi0 is None:
+        cov0 = coverage(true0, est_ci0, calc=True)
+        ivl0 = iv_length(est_ci0)
+        return {"rmse":rmse0, "bias":bias0, "cov":cov0, "ivl":ivl0}
+    else:
+        cov1 = coverage(true0, est_ci0, calc=True)
+        ivl1 = iv_length(est_ci0)
+        cov2 = coverage(true0, est_hdi0, calc=True)
+        ivl2 = iv_length(est_ci0)
+        return {"rmse":rmse0, 
+                "bias":bias0, 
+                "cov_ci":cov1, 
+                "cov_hdi":cov2, 
+                "ivl_ci":ivl1,
+                "iv_hdi":ivl2
+                }
 
 def get_metrics1(
     sv_true_lst0, 
     k_sv_lst0,
     k_sv_ci_lst0, 
     pb_sv_lst0,
+    pb_sv_hdi_lst0,
     pb_sv_ci_lst0, 
     r_sv_lst0, 
     r_sv_ci_lst0,
@@ -802,7 +857,8 @@ def get_metrics1(
     p = apply_metrics1(
         sv_true_lst0, 
         pb_sv_lst0,
-        pb_sv_ci_lst0
+        pb_sv_ci_lst0,
+        pb_sv_hdi_lst0
     )
     r = apply_metrics1(
         sv_true_lst0, 
@@ -811,7 +867,7 @@ def get_metrics1(
     )
     return k, p, r
 
-def apply_metrics2(true0, true1, est0, est1, est_ci0, est_ci1):
+def apply_metrics2(true0, true1, est0, est1, est_ci0, est_ci1, est_hdi0=None, est_hdi1=None):
     rmse0 = rmse(true0, est0)
     rmse1 = rmse(true1, est1)
     rmse_out = np.vstack([rmse0, rmse1]).mean(0)
@@ -820,16 +876,35 @@ def apply_metrics2(true0, true1, est0, est1, est_ci0, est_ci1):
     bias1 = bias(true1,est1)
     bias_out = np.vstack([bias0, bias1]).mean(0)
 
+    if est_hdi0 is None:
+        cov0 = coverage(true0, est_ci0, calc=True)
+        cov1 = coverage(true1, est_ci1, calc=True)
+        cov_out = np.vstack([cov0, cov1]).mean(0)
+        ivl0 = iv_length(est_ci0)
+        ivl1 = iv_length(est_ci1)
+        ivl_out = np.vstack([ivl0, ivl1]).mean(0)
+        return {"rmse":rmse_out, "bias":bias_out, "cov":cov_out, "ivl":ivl_out}
+    else:
+        cov0 = coverage(true0, est_ci0, calc=True)
+        cov1 = coverage(true1, est_ci1, calc=True)
+        cov2 = coverage(true0, est_hdi0, calc=True)
+        cov3 = coverage(true1, est_hdi1, calc=True)
+        cov_ci = np.vstack([cov0, cov1]).mean(0)
+        cov_hdi = np.vstack([cov2, cov3]).mean(0)
 
-    cov0 = coverage(true0, est_ci0, calc=True)
-    cov1 = coverage(true1, est_ci1, calc=True)
-    cov_out = np.vstack([cov0, cov1]).mean(0)
+        ivl0 = iv_length(est_ci0)
+        ivl1 = iv_length(est_ci1)
+        ivl2 = iv_length(est_hdi0)
+        ivl3 = iv_length(est_hdi1)
+        ivl_ci = np.vstack([ivl0, ivl1]).mean(0)
+        ivl_hdi = np.vstack([ivl2, ivl3]).mean(0)
+        return {"rmse":rmse_out, "bias":bias_out, "cov_ci":cov_ci, "cov_hdi":cov_hdi, "ivl_ci":ivl_ci, "ivl_hdi":ivl_hdi}
+        # cov_out = np.vstack([cov0, cov1]).mean(0)
+
     
 
-    ivl0 = iv_length(est_ci0)
-    ivl1 = iv_length(est_ci1)
-    ivl_out = np.vstack([ivl0, ivl1]).mean(0)
-    return {"rmse":rmse_out, "bias":bias_out, "cov":cov_out, "ivl":ivl_out}
+
+    
 
 def get_metrics2(
     sv_true_lst0, sv_true_lst1,
@@ -837,6 +912,7 @@ def get_metrics2(
     k_sv_ci_lst0, k_sv_ci_lst1,
     pb_sv_lst0, pb_sv_lst1,
     pb_sv_ci_lst0, pb_sv_ci_lst1,
+    pb_sv_hdi_lst0, pb_sv_hdi_lst1,
     r_sv_lst0, r_sv_lst1,
     r_sv_ci_lst0, r_sv_ci_lst1
 ):
@@ -848,7 +924,8 @@ def get_metrics2(
     p = apply_metrics2(
         sv_true_lst0, sv_true_lst1,
         pb_sv_lst0, pb_sv_lst1,
-        pb_sv_ci_lst0, pb_sv_ci_lst1
+        pb_sv_ci_lst0, pb_sv_ci_lst1,
+        pb_sv_hdi_lst0, pb_sv_hdi_lst1,
     )
     r = apply_metrics2(
         sv_true_lst0, sv_true_lst1,

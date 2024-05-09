@@ -34,12 +34,11 @@ def main():
     ml.log_dict({"seed_addl":prm.SEED_ADDL}, "seed_addl.json")
 
     for N in prm.N:
-    # for N in [200]:
         ############################################################        
-        # cond 1_1
+        # cond 1_1 cens 20%
         if False:
             strt_time = time.time()
-            meta, seeds, cens, k,p,r,fig = si.iter_simulation_1s(
+            seeds, cens, k,p,r,fig = si.iter_simulation_1s(
                 iters=prm.ITERS, 
                 n=N,
                 seed_addl=prm.SEED_ADDL,
@@ -56,10 +55,10 @@ def main():
             ml.log_dict({"time":end_time}, tname)
             print("DONE SIMPLE_1_1")
         ############################################################
-        # cond 1_2
+        # cond 1_2 cens 50%
         if False:
             strt_time = time.time()
-            meta, seeds, cens,k,p,r, fig= si.iter_simulation_1s(
+            seeds, cens,k,p,r, fig= si.iter_simulation_1s(
                 iters=prm.ITERS, 
                 n=N,
                 seed_addl=prm.SEED_ADDL,
@@ -79,7 +78,7 @@ def main():
         # cond 2_1
         if True:
             strt_time = time.time()
-            meta, seeds, cens,k,p,r,fig = si.iter_simulation_2s(
+            seeds, cens,k,p,r,fig = si.iter_simulation_2s(
                 iters=prm.ITERS, 
                 n=N,
                 seed_addl=prm.SEED_ADDL,
@@ -107,7 +106,7 @@ def main():
         #cond 2_2
         if True:
             strt_time = time.time()
-            meta, seeds, cens,k,p,r,fig = si.iter_simulation_2s(
+            seeds, cens,k,p,r,fig = si.iter_simulation_2s(
                 iters=prm.ITERS, 
                 n=N,
                 seed_addl=prm.SEED_ADDL,
@@ -117,7 +116,7 @@ def main():
                 sampler_dict=prm.SAMPLER_DICT2,
                 plot_all=prm.PLOT_ALL
             )
-            lo.log_params("2_1", N, cn.simple_2_2, prm.MODEL_DICT2, prm.SAMPLER_DICT2, seeds)
+            lo.log_params("2_2", N, cn.simple_2_2, prm.MODEL_DICT2, prm.SAMPLER_DICT2, seeds)
             lo.log_mets("2_2", N, cens, k, p, r)
             
             if prm.PLOT_ALL:
