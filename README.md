@@ -1,25 +1,31 @@
-# CDCgov GitHub Organization Open Source Project Template
+## Overview
 
-**Template for clearance: This project serves as a template to aid projects in starting up and moving through clearance procedures. To start, create a new repository and implement the required [open practices](open_practices.md), train on and agree to adhere to the organization's [rules of behavior](rules_of_behavior.md), and [send a request through the create repo form](https://forms.office.com/Pages/ResponsePage.aspx?id=aQjnnNtg_USr6NJ2cHf8j44WSiOI6uNOvdWse4I-C2NUNk43NzMwODJTRzA4NFpCUk1RRU83RTFNVi4u) using language from this template as a Guide.**
+BART-Survival is a Python package that allows time-to-event (survival analyses) in discrete-time using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). BART_Survival combines the performance of the BART algorithm from the PyMC-BART library with the complementary data and model structural formatting required to provide a convenient approach to conducting high performance, non-parametric survival analysis. 
 
-**General disclaimer** This repository was created for use by CDC programs to collaborate on public health related projects in support of the [CDC mission](https://www.cdc.gov/about/organization/mission.htm).  GitHub is not hosted by the CDC, but is a third party website used by CDC and its partners to share information and collaborate on software. CDC use of GitHub does not imply an endorsement of any one particular service, product, or enterprise. 
+This repository contains the source code and documentation for the BART_SURVIVAL package as well as user-guides/example notebooks. We additionally provide the code used in conducting the validation study of the algorithm.
 
-## Access Request, Repo Creation Request
+### Installation
 
-* [CDC GitHub Open Project Request Form](https://forms.office.com/Pages/ResponsePage.aspx?id=aQjnnNtg_USr6NJ2cHf8j44WSiOI6uNOvdWse4I-C2NUNk43NzMwODJTRzA4NFpCUk1RRU83RTFNVi4u) _[Requires a CDC Office365 login, if you do not have a CDC Office365 please ask a friend who does to submit the request on your behalf. If you're looking for access to the CDCEnt private organization, please use the [GitHub Enterprise Cloud Access Request form](https://forms.office.com/Pages/ResponsePage.aspx?id=aQjnnNtg_USr6NJ2cHf8j44WSiOI6uNOvdWse4I-C2NUQjVJVDlKS1c0SlhQSUxLNVBaOEZCNUczVS4u).]_
 
-## Related documents
+### API
 
+
+### User Guide
+
+
+### Validation study links
+
+
+# CDCgov General Disclaimers
+This repository was created for use by CDC programs to collaborate on public health related projects in support of the [CDC mission](https://www.cdc.gov/about/organization/mission.htm).  GitHub is not hosted by the CDC, but is a third party website used by CDC and its partners to share information and collaborate on software. CDC use of GitHub does not imply an endorsement of any one particular service, product, or enterprise. 
+
+## Related Documents
 * [Open Practices](open_practices.md)
 * [Rules of Behavior](rules_of_behavior.md)
-* [Thanks and Acknowledgements](thanks.md)
 * [Disclaimer](DISCLAIMER.md)
 * [Contribution Notice](CONTRIBUTING.md)
 * [Code of Conduct](code-of-conduct.md)
-
-## Overview
-
-Describe the purpose of your project. Add additional sections as necessary to help collaborators and potential collaborators understand and use your project.
+* [Licence](licence)
   
 ## Public Domain Standard Notice
 This repository constitutes a work of the United States Government and is not
