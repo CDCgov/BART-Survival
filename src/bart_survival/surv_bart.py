@@ -16,8 +16,9 @@ from pymc_bart.utils import _sample_posterior
 import cloudpickle as cpkl
 from numpy.random import RandomState
 
+# test
 class BartSurvModel():
-    """BART Survival Model 
+    """BART Survival Model
 
     Returns:
         _type_: BartSurvModel
