@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>simulation &#8212; BART Survival 02/01/2024 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
+    <script src="../_static/documentation_options.js?v=3dfe6f15"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="surv_bart" href="surv_bart.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-simulation">
+<span id="simulation"></span><h1>simulation<a class="headerlink" href="#module-simulation" title="Link to this heading">¶</a></h1>
+<p>Generate a simulated survival datasets</p>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../simulation.html#simulation.check_inputs" title="simulation.check_inputs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_inputs</span></code></a>(scale, shape[, u, t])</p></td>
+<td><p>Checks input types.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../simulation.html#simulation.get_x_matrix" title="simulation.get_x_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_x_matrix</span></code></a>([N, x_vars, VAR_CLASS, ...])</p></td>
+<td><p>Generates a covariate matrix to use in simulating survival functions and components.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../simulation.html#simulation.inverse_weibull_survival" title="simulation.inverse_weibull_survival"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inverse_weibull_survival</span></code></a>(scale, shape, u)</p></td>
+<td><p>Generates event times from an inverse weibull distribution.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../simulation.html#simulation.simulate_survival" title="simulation.simulate_survival"><code class="xref py py-obj docutils literal notranslate"><span class="pre">simulate_survival</span></code></a>([x_mat, scale_f, shape_f, ...])</p></td>
+<td><p>Generates survival outcome data from a covariate data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../simulation.html#simulation.weibull_hazard" title="simulation.weibull_hazard"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weibull_hazard</span></code></a>(scale, shape, t)</p></td>
+<td><p>Generates hazard rates at time from weibull distribution.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../simulation.html#simulation.weibull_survival" title="simulation.weibull_survival"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weibull_survival</span></code></a>(scale, shape, t)</p></td>
+<td><p>Generates survival probabilites from weibull distribution.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">BART Survival</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">BART_SURVIVAL Modules</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html">surv_bart</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">simulation</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../api.html">BART_SURVIVAL Modules</a><ul>
+      <li>Previous: <a href="surv_bart.html" title="previous chapter">surv_bart</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Jacob Tiegs.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="../_sources/generated/simulation.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

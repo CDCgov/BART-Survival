@@ -1,0 +1,8 @@
+BART_SURVIVAL Modules
+=====================
+
+.. toctree::
+   surv_bart
+   simulation
+   :maxdepth: 2
+   :caption: Contents:
