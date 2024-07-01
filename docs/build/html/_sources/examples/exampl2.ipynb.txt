@@ -1,0 +1,28 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "x = 1\n",
+    "x"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": ".venv",
+   "language": "python",
+   "name": ".venv"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.10.12 (main, Nov 20 2023, 15:14:05) [GCC 11.4.0]"
+  },
+  "orig_nbformat": 4
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

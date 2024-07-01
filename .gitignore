@@ -1,0 +1,10 @@
+.venv
+*__pycache__
+*__pycache__
+*.pyc
+*.pkl
+
+dist/
+src/*.egg-info/
+*.egg-info/
+dump/

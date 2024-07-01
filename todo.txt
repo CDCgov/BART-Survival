@@ -1,0 +1,45 @@
+###########################
+Package building 
+
+# use this for managing the package while editing the code
+$ pip install --editable .
+
+# use this to push to pypitest
+python3 -m twine upload --repository testpypi dist/*.1.3* --verbose
+python3 -m twine upload dist/*0.0.5* --verbose
+
+# use this to install from pypitest
+python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps BART_SURVIVAL==0.0.1.3
+pip install  BART_SURVIVAL==0.0.5
+
+# use this to build docs
+python3 -m build
+
+#############################
+Documentation
+sphinx-build -M html docs/source docs/build
+
+Jupyter notebook executions can be exported to HTML and saved in the docs/source dir. 
+The document can be then inserted within a containing '.rst' 
+See user_guide.rst for example
+
+###########################
+github
+git remote add origin https://github.com/twj8CDC/BART_SURVIVAL.git
+git branch -M main
+git push -u origin main
+
+
+
+#######################################
+TODO
+1. create a pytest run script       DONE
+2. setup github
+3. finish surv_bart module
+4. fix the "exp" in simulation
+5. Case-cohort module
+6. Add in types
+
+#long-term todo
+1. track the dependencies
+2. figure out minimum python version
