@@ -21,7 +21,7 @@ cloudpickle==3.0.0
 comm==0.2.1
 cons==0.4.6
 contourpy==1.2.0
-cryptography==42.0.2
+cryptography==42.0.4
 cycler==0.12.1
 debugpy==1.8.0
 decorator==5.1.1
