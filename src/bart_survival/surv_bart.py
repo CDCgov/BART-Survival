@@ -15,6 +15,7 @@ import pytensor.tensor as pt
 from pymc_bart.utils import _sample_posterior
 import cloudpickle as cpkl
 from numpy.random import RandomState
+import multiprocessing as mp
 
 # test
 class BartSurvModel():
@@ -43,6 +44,13 @@ class BartSurvModel():
         self.model = None  # Set by build_model
         self.idata: Optional[az.InferenceData] = None  # idata is generated during fitting
         self.is_fitted_ = False
+    # deconstructure added to handle the linger processes
+    def __del__(self): 
+        childs = mp.active_children()
+        for child in childs:
+            child.kill()
+
+
 
     def build_model(
         self, 
