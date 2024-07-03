@@ -134,7 +134,7 @@ qtconsole==5.5.1
 QtPy==2.4.1
 readme-renderer==42.0
 referencing==0.33.0
-requests==2.31.0
+requests==2.32.2
 requests-toolbelt==1.0.0
 rfc3339-validator==0.1.4
 rfc3986==2.0.0
