@@ -10,12 +10,3 @@ Welcome to BART Survival's documentation
 .. toctree::
    api
 
-
-
-
-
-Indices and tables
-==================
-
-* :ref:`modindex`
-* :ref:`search`
