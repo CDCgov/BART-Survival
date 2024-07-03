@@ -4,12 +4,12 @@
    contain the root `toctree` directive.
 
 Welcome to BART Survival's documentation !!
-=========================================
+===========================================
 
 
 .. toctree::
    api
-   :maxdepth: 2
+   .. :maxdepth: 2
    :caption: Contents:
 
 
