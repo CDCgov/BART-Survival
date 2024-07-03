@@ -6,22 +6,17 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'BART Survival'
+project = 'BART-Survival'
 copyright = '2024, Jacob Tiegs'
 author = 'Jacob Tiegs'
-release = '02/01/2024'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = [
-    'sphinx.ext.autodoc', 
-    'sphinx.ext.napoleon',
-    # 'sphinx.ext.autosummary'
-]
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.napoleon']
 
 templates_path = ['_templates']
-exclude_patterns = ["test.py"]
+exclude_patterns = []
 
 
 
@@ -29,12 +24,8 @@ exclude_patterns = ["test.py"]
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'alabaster'
-html_static_path = ["_static"]
+html_static_path = ['_static']
 
 import os
 import sys
-
-
-# sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'src/bart_survival')))
-print(os.path.abspath('../../src/bart_survival'))
 sys.path.insert(0, os.path.abspath('../../src/bart_survival'))
