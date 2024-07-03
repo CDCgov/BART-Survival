@@ -44,11 +44,13 @@ class BartSurvModel():
         self.model = None  # Set by build_model
         self.idata: Optional[az.InferenceData] = None  # idata is generated during fitting
         self.is_fitted_ = False
+
+    # note that this needs to be implemented at the pymc-BART level, otherwise it is untraceable and can lead to unwanted behavior        
     # deconstructure added to handle the linger processes
-    def __del__(self): 
-        childs = mp.active_children()
-        for child in childs:
-            child.kill()
+    # def __del__(self): 
+    #     childs = mp.active_children()
+    #     for child in childs:
+    #         child.kill()
 
 
 
@@ -470,71 +472,87 @@ class BartSurvModel():
         hasher.update(self._model_type.encode())
         return hasher.hexdigest()[:16]
 
-def get_time_transform(
-    t_event:np.ndarray, 
-    time_scale:int = 10
-)->np.ndarray:
-    """Down scale event time data.
+# def get_time_transform(
+#     t_event:np.ndarray, 
+#     time_scale:int = 10
+# )->np.ndarray:
+#     """Down scale event time data.
 
-    The BartSurvModel is a resource heavy model. Because each observation is expanded into a long-time format, using non-scaled times will increase the training data by number of time points up-to each event times. To reduce the computational burden it is recommended to down-scale to the event times. 
-    In example, if there are 90 days in the event-time and down-scaling of 30 was applied, it would return times 1,2,3 corresponding to days 30,60,90.
+#     The BartSurvModel is a resource heavy model. Because each observation is expanded into a long-time format, using non-scaled times will increase the training data by number of time points up-to each event times. To reduce the computational burden it is recommended to down-scale to the event times. 
+#     In example, if there are 90 days in the event-time and down-scaling of 30 was applied, it would return times 1,2,3 corresponding to days 30,60,90.
 
-    Args:
-        t_event (np.ndarray): Event times.
-        time_scale (int, optional): Scale by which to reduce event times. Defaults to 10.
+#     Args:
+#         t_event (np.ndarray): Event times.
+#         time_scale (int, optional): Scale by which to reduce event times. Defaults to 10.
 
-    Returns:
-        np.ndarray: Down-scaled event times.
-    """
-    return np.ceil(t_event/time_scale)
+#     Returns:
+#         np.ndarray: Down-scaled event times.
+#     """
+#     return np.ceil(t_event/time_scale)
     
-def get_y_sklearn(
-    status:np.ndarray, 
-    t_event:np.ndarray
-)->np.ndarray:
-    """Reformats event status and event times to the sklearn-survival default format.
+# def get_y_format(
+#     status:np.ndarray, 
+#     t_event:np.ndarray
+# )->np.ndarray:
+#     """Reformats event status and event times to the sklearn-survival default format.
 
-    Args:
-        status (np.ndarray): Event status.
-        t_event (np.ndarray): Event time.
+#     Args:
+#         status (np.ndarray): Event status.
+#         t_event (np.ndarray): Event time.
 
-    Returns:
-        np.ndarray: Event status/time in sklearn format.
-    """
-    y = np.array(list(zip(np.array(status, dtype="bool"), t_event)), dtype=[("Status","?"),("Survival_in_days", "<f8")])
-    return y
+#     Returns:
+#         np.ndarray: Event status/time in sklearn format.
+#     """
+#     y = np.array(list(zip(np.array(status, dtype="bool"), t_event)), dtype=[("Status","?"),("Survival_in_days", "<f8")])
+#     return y
 
-def get_surv_pre_train(
-    y_sk:np.ndarray, 
-    x_sk:np.ndarray, 
-    weight:Optional[np.ndarray] = None
+def get_surv_pre_train( 
+    y_time:np.ndarray,
+    y_status:np.ndarray,
+    x:np.ndarray, 
+    weight:Optional[np.ndarray] = None,
+    time_scale = None 
 )-> Dict:
     """Generates long-time formatted event status and covariate matrix.
 
     The SurvBartModel operates using a discrete time format. This means each observation is represented by a series of observations for each time point up to the event time. 
 
     Args:
-        y_sk (np.ndarray): Event time/status in y_sk format.
-        x_sk (np.ndarray): Covariate matrix.
+        y_time (np.ndarray): Event time
+        y_status (nd.array): Event status indicator (1 if event occurs, 0 if censored)
+        x (np.ndarray): Covariate matrix.
         weight (Optional[np.ndarray], optional): Weights associated with each observation. If non provided, then each observation will have weights of 1. Defaults to None.
-
+        time_scale (Optional[int]): time scaleing factor
     Returns:
         Dict: Dictionary containg all of the training data including an event status array, covariate matrix, weights and coordinates associated with the long-time format.
     """
     if weight is None:
-        weight = np.ones(y_sk.shape[0])
-    t_sk = y_sk["Survival_in_days"]
-    d_sk = np.array(y_sk["Status"], dtype="int")
-    t_uniq, t_inv = np.unique(t_sk, return_inverse=True)
-    t_wide = np.tile(t_uniq, (y_sk.shape[0],1))
-    d_wide = np.tile(np.zeros(t_uniq.shape[0]), (y_sk.shape[0],1))
-    max_t = t_sk.max()
+        weight = np.ones(y_time.shape[0])
+
+    if time_scale is not None:
+        yt = np.ceil(y_time/time_scale).flatten()
+    else:
+        yt = y_time.flatten()
+    # t_sk = y_sk["Survival_in_days"]
+
+    d_sk = np.array(y_status, dtype="int").flatten()
+    t_uniq, t_inv = np.unique(yt, return_inverse=True)
+    t_wide = np.tile(t_uniq, (y_time.shape[0],1))
+    # print(t_wide.shape)
+    # print(t_wide)
+    d_wide = np.tile(np.zeros(t_uniq.shape[0]), (y_time.shape[0],1))
+    # print(d_wide.shape)
+    max_t = yt.max()
+    # print(max_t)
+
 
     # replace the time greater than t_sk. LOOP is over columns, so it should be fast with the exception of unscalled, many days
     for i in np.arange(t_wide.shape[1]):
-        t_wide[t_wide[:,i] > t_sk,i]=max_t + 1
-        d_wide[t_wide[:,i] == t_sk,i] = d_sk[t_wide[:,i]==t_sk]
-        d_wide[t_wide[:,i] > t_sk, i] = 2
+        # print(yt)
+        # print(t_wide[t_wide[:,i]>yt,i])
+        t_wide[t_wide[:,i] > yt,i]=max_t + 1
+        d_wide[t_wide[:,i] == yt,i] = d_sk[t_wide[:,i]==yt]
+        d_wide[t_wide[:,i] > yt, i] = 2
     
     # time
     t_wide = t_wide.reshape(t_wide.shape[0]*t_wide.shape[1],1)
@@ -546,7 +564,7 @@ def get_surv_pre_train(
     trn_y = trn_y.reshape(trn_y.shape[0],1)
     
     # x and delta expansion
-    tx = np.repeat(x_sk, t_inv+1, axis=0)
+    tx = np.repeat(x, t_inv+1, axis=0)
     trn_x = np.hstack([t_wide, tx])
 
     # weight expansion
@@ -554,7 +572,7 @@ def get_surv_pre_train(
     weight_long = weight_long.reshape(weight_long.shape[0],1)
 
     # get coords
-    coords = np.repeat(np.arange(0,x_sk.shape[0]), t_inv+1)
+    coords = np.repeat(np.arange(0,x.shape[0]), t_inv+1)
     return {
             "y":trn_y, 
             "x":trn_x, 
@@ -564,35 +582,40 @@ def get_surv_pre_train(
 
 
 def get_posterior_test(
-    y_sk:np.ndarray, 
-    x_test:np.ndarray
+    y_time: np.ndarray,
+    y_status: np.ndarray,
+    x:np.ndarray,
+    time_scale = None
 )->Dict:
     """Generates long-time format for posterior distribution testing.
     
     To analyze the posterior distribution, posterior predictive estimates need to be generated. Similar to the training data, the data for posterior predictions must also be in a long-time format.
 
     Args:
-        y_sk (np.ndarray): Event time/status in y_sk format.
+        y_time (np.ndarray): Event time
+        y_status (nd.array): Event status indicator (1 if event occurs, 0 if censored)
         x_test (np.ndarray): Covariate matrix.
-
+        time_scale (np.ndarray): Time Scaling factor
     Returns:
         Dict: Covariate matrix in long-time format and associated coordinates for the long-time format.
     """
-    uniq_times = np.unique(y_sk["Survival_in_days"])
-    s0 = x_test.shape[0] # length
-    s1 = x_test.shape[1] # width
+    if time_scale is not None:
+        y_time = np.ceil(y_time/time_scale)
+    uniq_times = np.unique(y_time)
+    s0 = x.shape[0] # length
+    s1 = x.shape[1] # width
     # create time range
     d1 = uniq_times
     d2 = np.tile(d1,s0).reshape(d1.shape[0]*s0,1)
-    d3 = np.tile(x_test, d1.shape[0]).reshape(s0*d1.shape[0], s1)
+    d3 = np.tile(x, d1.shape[0]).reshape(s0*d1.shape[0], s1)
     out = np.hstack([d2,d3])
     # coordinates
-    coords = np.repeat(np.arange(0, x_test.shape[0]), d1.shape[0])
+    coords = np.repeat(np.arange(0, x.shape[0]), d1.shape[0])
     return {"post_x": out, "coords":coords}
 
     
 def get_pdp(
-    x_sk:np.ndarray, 
+    x:np.ndarray, 
     var_col:List[int] = [], 
     values:List[Union[int,float]] = [], 
     qt:List[float] =[0.25,0.5,0.75], 
@@ -601,7 +624,7 @@ def get_pdp(
     """Generates data for Partial Dependency Plots.
 
     Args:
-        x_sk (np.ndarray): Covariate matrix.    
+        x (np.ndarray): Covariate matrix.    
         var_col (List[int], optional): Covariate column to generate pdp values. Defaults to [].
         values (List[Union[int,float]], optional): Values to test on for each covariate. Defaults to [].
         qt (List[float], optional): Quantiles to generate values on if non are given. Defaults to [0.25,0.5,0.75].
@@ -615,13 +638,13 @@ def get_pdp(
         pass
 
     if sample_n is not None:
-        rn_idx = np.random.choice(np.arange(0, x_sk.shape[0]), sample_n, replace=False)   
-        x_sk = x_sk[rn_idx,:]     
+        rn_idx = np.random.choice(np.arange(0, x.shape[0]), sample_n, replace=False)   
+        x = x[rn_idx,:]     
 
     var_vals = []
     for idx, var in enumerate(var_col):
         if values[idx] is None:
-            val =np.quantile(x_sk[:,var], qt)
+            val =np.quantile(x[:,var], qt)
             var_vals.append(val)
         else:
             var_vals.append(values[idx])
@@ -631,10 +654,10 @@ def get_pdp(
     else:
         cart = np.array(var_vals[0]).reshape(-1,1)
     s2 = cart.shape[0] # number of vals
-    s3 = x_sk.shape[0] # number of obs
-    out_sk = np.tile(x_sk, (s2,1)) # tile x_sk into blocks of number of vals
+    s3 = x.shape[0] # number of obs
+    out_sk = np.tile(x, (s2,1)) # tile x into blocks of number of vals
     l_cart = np.repeat(cart, s3, axis=0) # repeat vals number of obs times
-    for idx, var in enumerate(var_col): # fill the columns of the x_sk*blocks with new values
+    for idx, var in enumerate(var_col): # fill the columns of the x*blocks with new values
         out_sk[:,var] = l_cart[:,idx]
     # index
     c_idx = np.repeat(np.arange(s2),s3)
