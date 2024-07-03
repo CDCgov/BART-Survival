@@ -1,9 +1,6 @@
 BART_SURVIVAL API
 =====================
 
-.. autosummary::
-   :toctree: generated
-
-   surv_bart
-   simulation
-
+.. automodule:: surv_bart
+   :members: BartSurvModel
+   :undoc-members:
