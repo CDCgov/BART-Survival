@@ -17,6 +17,8 @@ python3 -m build
 
 #############################
 Documentation
+pip install -U sphinx
+
 sphinx-build -M html docs/source docs/build
 
 Jupyter notebook executions can be exported to HTML and saved in the docs/source dir. 

@@ -5,7 +5,12 @@ BART-Survival is a Python package that allows time-to-event (survival analyses) 
 This repository contains the source code and documentation for the BART_SURVIVAL package as well as user-guides/example notebooks. We additionally provide the code used in conducting the validation study of the algorithm.
 
 ### Installation
+Bart-Survival can be accessed directly from PyPi:
+`pip install bart-survival==0.1.1`
 
+Additonaly the whl/tar.gz and src code is accessible in the github repo:
+https://github.com/CDCgov/BART-Survival/dist
+https://github.com/CDCgov/BART-Survival/src
 
 ### API
 
