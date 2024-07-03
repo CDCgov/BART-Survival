@@ -1,6 +1,6 @@
 BART_SURVIVAL API
 =====================
 
-.. automodule:: bart_survival
-   .. autoclass:: BartSurvModel
+.. automodule:: surv_bart
+
 
