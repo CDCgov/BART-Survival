@@ -25,10 +25,20 @@ def test_surv_bart():
         rng = rng
     )
     # prepare data
-    t_scale = sb.get_time_transform(event_dict["t_event"], time_scale = 5)
-    y_sk = sb.get_y_sklearn(event_dict["status"], t_scale)
-    trn = sb.get_surv_pre_train(y_sk, x_mat, weight=None)
-    post_test = sb.get_posterior_test(y_sk=y_sk, x_test = x_mat)
+    # t_scale = sb.get_time_transform(event_dict["t_event"], time_scale = 5)
+    # y_sk = sb.get_y_sklearn(event_dict["status"], t_scale)
+    trn = sb.get_surv_pre_train(
+        y_status=event_dict["status"],
+        y_time=event_dict["t_event"],
+        x = x_mat, 
+        weight=None,
+        time_scale = 5
+        )
+    post_test = sb.get_posterior_test(
+        y_status=event_dict["status"],
+        y_time=event_dict["t_event"],
+        x = x_mat,
+        time_scale = 5)
 
     SPLIT_RULES =  [
         "pmb.ContinuousSplitRule()", # time
@@ -40,8 +50,8 @@ def test_surv_bart():
     sampler_dict = {
                 "draws": 100,
                 "tune": 100,
-                "cores": 8,
-                "chains": 8,
+                "cores": 4,
+                "chains": 4,
                 "compute_convergence_checks": False
             }
 
@@ -62,7 +72,10 @@ def test_surv_bart():
 
     # pdp
     pdp1 = sb.get_pdp(x_mat, var_col = [0], values = [[0,1]], sample_n = None)
-    pdp_tst = sb.get_posterior_test(y_sk, pdp1[0])
+    pdp_tst = sb.get_posterior_test(
+        y_status=event_dict["status"], 
+        y_time=event_dict["t_event"],
+        x = pdp1[0])
     pdp_post = BSM.sample_posterior_predictive(pdp_tst["post_x"], pdp_tst["coords"])
 
     sv_prob = sb.get_sv_prob(pdp_post)

@@ -34,3 +34,11 @@ git push -u origin main
 #######################################
 20240702
 - create a new .venv
+
+build package:
+- python -m build
+
+upload to pypi
+- python3 -m twine upload --repository pypi dist/*
+
+when rebuilding delet egg and dist files
