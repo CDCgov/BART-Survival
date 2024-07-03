@@ -3,4 +3,5 @@ BART_SURVIVAL API
 
 .. automodule:: surv_bart
    :members: BartSurvModel
-   :undoc-members:
+
+.. autoclass:: BartSurvModel
