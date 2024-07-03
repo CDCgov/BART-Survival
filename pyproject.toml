@@ -10,7 +10,6 @@ authors = [
 description = "Survival analyses with Bayesian Additivie Regression Trees."
 version = "0.0.5"
 dependencies = [
-    "multiprocessing",
     "numpy",
     "scipy",
     'pymc; python_version<="5.10.3"',

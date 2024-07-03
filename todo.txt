@@ -32,14 +32,5 @@ git push -u origin main
 
 
 #######################################
-TODO
-1. create a pytest run script       DONE
-2. setup github
-3. finish surv_bart module
-4. fix the "exp" in simulation
-5. Case-cohort module
-6. Add in types
-
-#long-term todo
-1. track the dependencies
-2. figure out minimum python version
+20240702
+- create a new .venv

@@ -4,5 +4,6 @@
         "CFPB",
         "ISSO",
         "cybersecurity"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "off"
 }

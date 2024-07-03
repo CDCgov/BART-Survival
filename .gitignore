@@ -9,3 +9,4 @@ src/*.egg-info/
 *.egg-info/
 dump/
 *todo.txt
+.vscode/
