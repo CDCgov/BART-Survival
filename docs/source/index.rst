@@ -9,8 +9,6 @@ Welcome to BART Survival's documentation !!
 
 .. toctree::
    api
-   .. :maxdepth: 2
-   :caption: Contents:
 
 
 
@@ -19,5 +17,6 @@ Welcome to BART Survival's documentation !!
 
 Indices and tables
 ==================
+
 * :ref:`modindex`
 * :ref:`search`
