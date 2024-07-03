@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>simulation &mdash; BART-Survival  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="surv_bart" href="surv_bart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BART-Survival
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html">surv_bart</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">simulation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bart_survival.simulation.check_inputs"><code class="docutils literal notranslate"><span class="pre">check_inputs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bart_survival.simulation.get_x_matrix"><code class="docutils literal notranslate"><span class="pre">get_x_matrix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bart_survival.simulation.inverse_weibull_survival"><code class="docutils literal notranslate"><span class="pre">inverse_weibull_survival()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bart_survival.simulation.simulate_survival"><code class="docutils literal notranslate"><span class="pre">simulate_survival()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bart_survival.simulation.weibull_hazard"><code class="docutils literal notranslate"><span class="pre">weibull_hazard()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bart_survival.simulation.weibull_survival"><code class="docutils literal notranslate"><span class="pre">weibull_survival()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BART-Survival</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="api.html">API</a></li>
+      <li class="breadcrumb-item active">simulation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/simulation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-bart_survival.simulation">
+<span id="simulation"></span><h1>simulation<a class="headerlink" href="#module-bart_survival.simulation" title="Link to this heading"></a></h1>
+<p>Generate a simulated survival datasets</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="bart_survival.simulation.check_inputs">
+<span class="sig-prename descclassname"><span class="pre">bart_survival.simulation.</span></span><span class="sig-name descname"><span class="pre">check_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">array([0.9])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">array([1])</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bart_survival.simulation.check_inputs" title="Link to this definition"></a></dt>
+<dd><p>Checks input types. If inputs are not <cite>type</cite> ndarray then converts to ndarray.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> (<em>ndarray</em>) – sets scale parameter for weibull Survival componenets</p></li>
+<li><p><strong>shape</strong> (<em>ndarray</em>) – sets shape parameter for weibull Survival components</p></li>
+<li><p><strong>u</strong> (<em>ndarray</em><em>, </em><em>optional</em>) – _description_. Defaults to np.array([.9]).</p></li>
+<li><p><strong>t</strong> (<em>ndarray</em><em>, </em><em>optional</em>) – _description_. Defaults to np.array([1]).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Exception</strong> – Raises exception if (u&lt;=0 or u&gt;=1), scale&lt;=0, shape&lt;=0, t&lt;=0</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple containing scale, shape, u, t</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bart_survival.simulation.get_x_matrix">
+<span class="sig-prename descclassname"><span class="pre">bart_survival.simulation.</span></span><span class="sig-name descname"><span class="pre">get_x_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VAR_CLASS</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VAR_PROB</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rng</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bart_survival.simulation.get_x_matrix" title="Link to this definition"></a></dt>
+<dd><p>Generates a covariate matrix to use in simulating survival functions and components.
+If x_vars &gt; length VAR_CLASS, then any additionally generated variables are drawn from a uniform distribution (0,1).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>N</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of observations. Defaults to 100.</p></li>
+<li><p><strong>x_vars</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of variabiables. Defaults to 1.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>VAR_CLASS (ndarray, optional): 1D array of integers defining range of numbers in each variable. VAR_CLASS of 2 will generate a binary variable. All other positive integers will draw from a uniform distribution with lower=0, upper=Integer. Defaults to None.</dt><dd><p>VAR_PROB (ndarray, optional): 1D array defines the probability parameter of binary variables created by <cite>VAR_CLASS`==2. All non-binary variables should have a value of `None</cite>. Defaults to None.
+rng (_type_, optional): Random Number Generator from numpy. Used to generate multiple datasets. Defaults to None.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>2D array, where rows are observations and columns are variables.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bart_survival.simulation.inverse_weibull_survival">
+<span class="sig-prename descclassname"><span class="pre">bart_survival.simulation.</span></span><span class="sig-name descname"><span class="pre">inverse_weibull_survival</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bart_survival.simulation.inverse_weibull_survival" title="Link to this definition"></a></dt>
+<dd><p>Generates event times from an inverse weibull distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> (<em>ndarray</em>) – Scale parameter.</p></li>
+<li><p><strong>shape</strong> (<em>ndarray</em>) – Shape parameter.</p></li>
+<li><p><strong>u</strong> (<em>ndarray</em>) – Draw from uniform probability distribution [0,1].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Event times given scale, shape, u parameters.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bart_survival.simulation.simulate_survival">
+<span class="sig-prename descclassname"><span class="pre">bart_survival.simulation.</span></span><span class="sig-name descname"><span class="pre">simulate_survival</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_mat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_f</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_f</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cens_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">true_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rng</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bart_survival.simulation.simulate_survival" title="Link to this definition"></a></dt>
+<dd><p>Generates survival outcome data from a covariate data.</p>
+<p>Using a covariate matrix and a linear equation that defines the linear combination of the covariates, the function will generate a Hazard Rate and Survival probability curve for each observation in the covariate matrix.
+Additionaly, an event time for each observation.
+Randomized right censoring and End-of-Study censoring can also be incorporated into the simulated dataset.</p>
+<dl class="simple">
+<dt>Survival times are generated from a Weibull Distribution with a user specified by the evaluation of the <cite>shape_f</cite> and <cite>scale_f</cite> parameters.</dt><dd><p>Increasing the scale will increase the number of time points.
+Shape controls if the hazard rate is increasing or decreasing.</p>
+</dd>
+</dl>
+<p><cite>scale_f</cite> must be parameterized as ‘np.exp(…linear equation…)’ this allows appropriate computation of hazard rates.
+Expected HR can be computed through <cite>np.power(np.exp(Beta_x), shape)</cite>.</p>
+<dl class="simple">
+<dt>A few documents that demonstarte the weibull distribution and function in Survival Analysis can be found here:</dt><dd><p><a class="reference external" href="https://wilmarigl.de/wp-content/uploads/2018/01/tutorial_hr_parsurvmodels.pdf">https://wilmarigl.de/wp-content/uploads/2018/01/tutorial_hr_parsurvmodels.pdf</a>
+<a class="reference external" href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda3668.htm">https://www.itl.nist.gov/div898/handbook/eda/section3/eda3668.htm</a></p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x_mat</strong> (<em>ndarray</em><em>, </em><em>optional</em>) – 2D array of the covariate matrix. Defaults to None.</p></li>
+<li><p><strong>scale_f</strong> (<em>string</em><em>, </em><em>optional</em>) – Equation that defines the scale parameter as a combination the covariate matrix. Defaults to None.</p></li>
+<li><p><strong>shape_f</strong> (<em>string</em><em>, </em><em>optional</em>) – Equation that defines the shape parameter as a combination of the covariate matrix. Combination with the covariate matrix is not always needed and will provide a Survival Components that follow a proportional hazard. Defaults to None.</p></li>
+<li><p><strong>eos</strong> (<em>int</em><em>, </em><em>optional</em>) – End of Study time point. Allows truncation of time-points as full-stop right censoring for generated event times. Defaults to None.</p></li>
+<li><p><strong>cens_scale</strong> (<em>int</em><em>, </em><em>optional</em>) – Incorporates uninformative censoring into the generated event times. Defaults to None.</p></li>
+<li><p><strong>time_scale</strong> (<em>int</em><em>, </em><em>optional</em>) – Downscales event times and Survival component times to value. Defaults to None.</p></li>
+<li><p><strong>true_only</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <cite>True</cite> returns only the Survival components and not the generated event times. Defaults to False.</p></li>
+<li><p><strong>rng</strong> (<em>_type_</em><em>, </em><em>optional</em>) – Random Number Generator to generate sequential survival datasets. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuble of dictionaries containing the various survival components.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bart_survival.simulation.weibull_hazard">
+<span class="sig-prename descclassname"><span class="pre">bart_survival.simulation.</span></span><span class="sig-name descname"><span class="pre">weibull_hazard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bart_survival.simulation.weibull_hazard" title="Link to this definition"></a></dt>
+<dd><p>Generates hazard rates at time from weibull distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> (<em>ndarray</em>) – Scale parameter.</p></li>
+<li><p><strong>shape</strong> (<em>ndarray</em>) – Shape parameter.</p></li>
+<li><p><strong>t</strong> (<em>ndarray</em>) – Time points to generate hazard rates.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2D ndarray that contains survival probabilites for <cite>t.shape[0]</cite> times points and <cite>scale.shape[0]</cite> observations.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bart_survival.simulation.weibull_survival">
+<span class="sig-prename descclassname"><span class="pre">bart_survival.simulation.</span></span><span class="sig-name descname"><span class="pre">weibull_survival</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bart_survival.simulation.weibull_survival" title="Link to this definition"></a></dt>
+<dd><p>Generates survival probabilites from weibull distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> (<em>ndarray</em>) – Scale parameter.</p></li>
+<li><p><strong>shape</strong> (<em>ndarray</em>) – Shape parameter.</p></li>
+<li><p><strong>t</strong> (<em>ndarray</em>) – Time points to generate survival probabilities.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2D ndarray that contains survival probabilites for <cite>t.shape[0]</cite> times points and <cite>scale.shape[0]</cite> observations.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="surv_bart.html" class="btn btn-neutral float-left" title="surv_bart" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Jacob Tiegs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

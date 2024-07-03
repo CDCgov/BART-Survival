@@ -3,18 +3,13 @@
 
 Welcome to BART-Survival's documentation!
 =========================================
-.. automodule:: bart_survival.surv_bart
-   :members:
+
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
+   
+   api
+   examples
 
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
