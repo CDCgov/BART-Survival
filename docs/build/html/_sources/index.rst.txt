@@ -4,6 +4,7 @@
 Welcome to BART-Survival's documentation!
 =========================================
 
+Add the readme info here
 
 .. toctree::
    :maxdepth: 1
