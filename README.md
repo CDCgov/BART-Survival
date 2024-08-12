@@ -15,7 +15,10 @@ https://github.com/CDCgov/BART-Survival/src
 ### API
 https://cdcgov.github.io/BART-Survival/build/html/index.html
 
-### User Guide
+### User Guide/Example Notebooks
+https://github.com/CDCgov/BART-Survival/blob/main/examples/example1.ipynb
+
+https://github.com/CDCgov/BART-Survival/blob/main/examples/example2.ipynb
 
 
 ### Validation study links
@@ -86,13 +89,3 @@ published through the [CDC web site](http://www.cdc.gov).
 Please refer to [CDC's Template Repository](https://github.com/CDCgov/template) for more information about [contributing to this repository](https://github.com/CDCgov/template/blob/main/CONTRIBUTING.md), [public domain notices and disclaimers](https://github.com/CDCgov/template/blob/main/DISCLAIMER.md), and [code of conduct](https://github.com/CDCgov/template/blob/main/code-of-conduct.md).
 
 
-
-Repository for BART Survival Package. 
-
-Based on the PYMC Bayesian Additive Regression Trees implementation, this package provides a preconfigured model for BART applied in the survival setting and necessary data processing algorithms to implement such model.
-
-Installation
-`pip install BART_SURVIVAL`
-
-Documentation:
-https://twj8cdc.github.io/BART_SURVIVAL/
