@@ -10,3 +10,5 @@ src/*.egg-info/
 dump/
 *todo.txt
 .vscode/
+todo.txt
+todo.md
