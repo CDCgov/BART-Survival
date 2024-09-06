@@ -89,11 +89,11 @@ Common marginal effect estimates derived from these predicted values include:
 
 $$
 \begin{equation}
-\text{Risk Diff}_{marg} = E_ij 
+\text{Risk Diff}_{marg} = E_{ij} 
 \end{equation}
 $$
 
-(t_j)]- E_i[S_{p_{\[1\]}}(t_j)]
+(t_j)- E_i[S_{p_{\[1\]}}(t_j)]
 - Marginal Risk Ratio at time $j$:
 $$
 \text{RR}_{marg} = \frac {E_{i}[p_{[2]_{j}}]} {E_{i}[p_{[1]_{j}}]}
