@@ -13,7 +13,11 @@ Using discrete-time intervals provides a convenient approach to flexibly model t
 
 The foundation of the method is simple.  First create a sequence of time intervals, denoted as $t_j$ with ($j = {1,...,k}$), from the range of observed event times. Then for each interval $t_j$ obtain the number of observations with an event, along with the total number of observations at risk for having an event. Finally, the risk of event occurence within each interval $t_j$ can naively be derived as: 
 
-$$P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}$$
+$$
+\begin{equation}
+P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
+\end{equation}
+$$
 
 and the survival probability $S(t)$ at a time $q$, can be derived as:
 
@@ -27,11 +31,11 @@ where  $q \in j$.
 
 BART-Survival builds off this simple foundation by replacing $P_t$ with a probability risk estimate, $p_{t_j|x_i}$ yielded from a BART regression model for each distinct observation in the dataset and survival can be estimated as: 
 
-
+$$
 \begin{equation}
 S(t_q|x_i) = \prod_{j=1}^{q} (1-p_{t_j|x_i})
 \end{equation}
-
+$$
 
 To properly model $p_{t|x}$, the data requires an transformation from the standard dataset to a _augmented_ dataset. Standard survival data is given as a paired (**event status**, **event time**) outcome and set of covariates for each observation. **Event status** is typically a binary variable (1=event; 0=censored) and **event time** is some continous representation of time.
 
@@ -56,13 +60,13 @@ Each row in the _augmented_ dataset is treated as an independent observation, wi
 Using the new _augmented_ dataset, the model is simplified to a probit regression of $y_{ij}$ on time $t_{j}$ and covariates $x_{ij}$, which yields a latent value $p_{ij}$ corresponding to $P(y_{ij} = 1)$. Explicitly the model is defined as:
 
 
-$
+$$
 \begin{align*}
     y_{ij} | p_{ij} \sim Bernoulli(p_{ij}) \\
     p_{ij} | \mu_{ij} = \Phi(\mu_{ij})\\
     \mu_{ij} \sim \text{BART}(j,x_{i})\\
 \end{align*}
-$
+$$
 
 where $\Phi$  is the CDF of the Normal distribution.
 
