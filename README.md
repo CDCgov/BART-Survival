@@ -94,17 +94,17 @@ Common marginal effect estimates derived from these predicted values include:
 \end{equation}
 ```
 
-(t_j)- E_i[S_{p_{\[1\]}}(t_j)]
 - Marginal Risk Ratio at time $j$:
-$$
+
+```math
 \text{RR}_{marg} = \frac {E_{i}[p_{[2]_{j}}]} {E_{i}[p_{[1]_{j}}]}
-$$
+```
 
 
 - Marginal Hazard Ratio (assuming constant hazard rates):
-$$
+```math
 \text{HR}_{marg} = \frac {E_{ij}[p_{[2]}]} {E_{ij}[p_{[1]}]}
-$$
+```
 
 
 Uncertaintity intervals for the estimates are additionally generated from the posterior predictive distributions and naturally accompany the estimated point values.
