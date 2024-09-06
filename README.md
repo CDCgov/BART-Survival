@@ -1,8 +1,121 @@
 ## Overview
 
-BART-Survival is a Python package that allows time-to-event (survival analyses) in discrete-time using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). BART_Survival combines the performance of the BART algorithm from the PyMC-BART library with the complementary data and model structural formatting required to provide a convenient approach to conducting high performance, non-parametric survival analysis. 
+`BART-Survival` is a Python package that allows time-to-event (survival analyses) in discrete-time using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). BART-Survival combines the performance of the BART algorithm from the PyMC-BART library with the complementary data and model structural formatting required to provide a convenient approach to conducting high performance, non-parametric survival analysis. 
 
 This repository contains the source code and documentation for the BART_SURVIVAL package as well as user-guides/example notebooks. We additionally provide the code used in conducting the validation study of the algorithm.
+
+### Background
+
+Survival analysis methods are statistical methods used to describe the risk of an event occurrence over a period of time. The BART-Survival package provides a discrete-time survival method which aims to model survival as a function of the cumulative risk of event occurence over the series of discrete time intervals. 
+
+Using discrete-time intervals provides a convenient approach to flexibly model the latent probability of event as a non-parametric function of the distinct time interval and a set of observation covariates. The latent probabilities can then be used for deriving survival probability or other estimates.
+
+
+The foundation of the method is simple.  First create a sequence of time intervals, denoted as $t_j$ with ($j = {1,...,k}$), from the range of observed event times. Then for each interval $t_j$ obtain the number of observations with an event, along with the total number of observations at risk for having an event. Finally, the risk of event occurence within each interval $t_j$ can naively be derived as: 
+$$
+\tag{1}
+
+P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
+
+$$
+
+and the survival probability $S(t)$ at a time $q$, can be derived as:
+
+$
+\begin{equation}
+S(t_q) = \prod_{j=1}^{q} (1-P_{t_j}) 
+\end{equation}
+$
+
+where  $q \in j$. 
+
+BART-Survival builds off this simple foundation by replacing $P_t$ with a probability risk estimate, $p_{t_j|x_i}$ yielded from a BART regression model for each distinct observation in the dataset and survival can be estimated as: 
+
+$
+\begin{equation}
+S(t_q|x_i) = \prod_{j=1}^{q} (1-p_{t_j|x_i})
+\end{equation}
+$
+
+To properly model $p_{t|x}$, the data requires an transformation from the standard dataset to a _augmented_ dataset. Standard survival data is given as a paired (**event status**, **event time**) outcome and set of covariates for each observation. **Event status** is typically a binary variable (1=event; 0=censored) and **event time** is some continous representation of time.
+
+The _augmented_ dataset transforms the generic dataset from a single, paired (**event status**, **event time**) outcome per observation, to a sequence of single (**event status**) outcomes over the series of discrete-time intervals, up to the given **event time**. 
+
+For example if the unique set of a dataset's **event times** is **{4,6,7,8,12,14}**, and a single observation's paired outcome is (**event status** = 1, **event times** = 12), then the observation will be represented in the _augmented_ dataset as the sequence of observations:
+
+$$
+\begin{matrix} 
+\text{event status} &\text{time} \\
+ --- &---\\
+    0 & 4\\
+    0 & 6 \\
+    0 & 7 \\
+    0 & 8 \\
+    1 & 12 \\
+\end{matrix}
+$$
+
+Each row in the _augmented_ dataset is treated as an independent observation, with **event status** as the outcome $Y$ and the **event time** $T$ as an added covariate. Now each of the original observations are represented by $j$ rows ($j=1,...,i_\text{event time})$ and the corresponding variables can be denoted as ($y_{ij}$, $t_{j}$, $x_{ij}$). 
+
+Using the new _augmented_ dataset, the model is simplified to a probit regression of $y_{ij}$ on time $t_{j}$ and covariates $x_{ij}$, which yields a latent value $p_{ij}$ corresponding to $P(y_{ij} = 1)$. Explicitly the model is defined as:
+
+
+$
+\begin{align*}
+    y_{ij} | p_{ij} \sim Bernoulli(p_{ij}) \\
+    p_{ij} | \mu_{ij} = \Phi(\mu_{ij})\\
+    \mu_{ij} \sim \text{BART}(j,x_{i})\\
+\end{align*}
+$
+
+where $\Phi$  is the CDF of the Normal distribution.
+
+A trained BART-Survival model yields the $p_{ij}$ esimates which can be used to derive survival as decribed in equation (3).
+
+
+
+#### Inference
+A typical goal of survival regression models is to derive a statistical estimate for the effect of a variable on the outcome. The classic example being Hazard Ratios simply derived from the coefficients of Cox Proportional Hazard Models.
+
+With BART-Survival, the underlying BART algorithm does not rely on a linear equation and does not produce coefficient that can be treated as measures of effects. Instead, variable effects are summarized as marginial effect estimates which can derived through use of partial depence functions. 
+
+The partial dependence function method is relatively simple. It involves generating predictions of $p$ from a trained BART-Survival model using a _augmented partial dependence_ (_APD_) dataset as input. 
+
+The _APD_ dataset is generated so that a specific variable $x_{[I]}$ is deterministically set to a specific value for all observations while the other covariates $x_{i[O]}$ remain as observed. Each observation is then expanded over the time-intervals $1,...,j_{T_{max}}$ to create the discrete-time datasets.
+
+Mulitple _APD_ datasets can be created, each with different values of the specific variable of interest (i.e. $x_{[I]_1}$, $x_{[I]_2})$. The $p_{ij}$ values from each predicted dataset ($p_{[1]}$, $p_{[2]}$), can then be contrasted. 
+
+Common marginal effect estimates derived from these predicted values include:
+
+- Marginal difference is survival probability at time $j$:
+$$
+\text{Risk Diff.}_{marg} = E_{i}[S_{p_{[2]}}(t_j)]- E_{i}[S_{p_{[1]}}(t_j)]$$
+
+- Marginal Risk Ratio at time $j$:
+$$
+\text{RR}_{marg} = \frac {E_{i}[p_{[2]_{j}}]} {E_{i}[p_{[1]_{j}}]}
+ $$
+
+
+- Marginal Hazard Ratio (assuming constant hazard rates):
+$$
+\text{HR}_{marg} = \frac {E_{ij}[p_{[2]}]} {E_{ij}[p_{[1]}]}
+$$
+
+
+Uncertaintity intervals for the estimates are additionally generated from the posterior predictive distributions and naturally accompany the estimated point values.
+
+#### Summary
+
+The BART-Survival package provide the algorithms necessary to complete the 3 major steps of the survival analysis.
+
+1. Generate augmented dataset
+2. Train-predict-transform the BART model and estimates
+3. Generate _augmented partial dependece_ datasets and generate estimates.
+
+
+
+
 
 ### Installation
 Bart-Survival can be accessed directly from PyPi:
@@ -11,6 +124,11 @@ Bart-Survival can be accessed directly from PyPi:
 Additonaly the whl/tar.gz and src code is accessible in the github repo:
 https://github.com/CDCgov/BART-Survival/dist
 https://github.com/CDCgov/BART-Survival/src
+
+### Demonstration
+
+
+
 
 ### API
 https://cdcgov.github.io/BART-Survival/build/html/index.html
