@@ -15,7 +15,7 @@ The foundation of the method is simple.  First create a sequence of time interva
 
 $$
 \begin{equation}
-P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
+
 \end{equation}
 $$
 
