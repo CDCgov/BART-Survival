@@ -95,7 +95,7 @@ With `BART-Survival`, the underlying BART algorithm does not rely on a linear eq
 
 The partial dependence function method is relatively simple. It involves generating predictions of $p$ from a trained `BART-Survival` model using a _augmented partial dependence_ (_APD_) dataset as input. 
 
-The _APD_ dataset is generated so that a specific variable $x_{[I]}$ is deterministically set to a specific value for all observations while the other covariates $x_{[O]_i}$ remain as observed. Each observation is then expanded over the time-intervals $1,...,j_{T_{max}}$ to create the discrete-time datasets.
+The _APD_ dataset is generated so that a specific variable $x_{[I]}$ is deterministically set to a specific value for all observations while the other covariates $`x_{[O]_i}`$ remain as observed. Each observation is then expanded over the time-intervals $1,...,j_{T_{max}}$ to create the discrete-time datasets.
 
 To estimate the effect of an variable on the outcome, multiple _APD_ datasets are created. Each _APD_ dataset varies the value of the specific variable of interest (i.e. $`x_{[I]_1}`$, $`x_{[I]_2}`$ ), allowing evaluation of the outcome under different conditions of that variable. The $p_{ij}$ values from each predicted dataset ($p_{[1]}$, $p_{[2]}$), can be used to obtain the marginal estimates of a specific outcome. 
 
