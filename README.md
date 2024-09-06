@@ -87,11 +87,12 @@ Common marginal effect estimates derived from these predicted values include:
 
 - Marginal difference is survival probability at time $j$:
 
-$$
+
+```math
 \begin{equation}
 \text{Risk Diff}_{marg} = E_{ij}
 \end{equation}
-$$
+```
 
 (t_j)- E_i[S_{p_{\[1\]}}(t_j)]
 - Marginal Risk Ratio at time $j$:
