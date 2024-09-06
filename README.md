@@ -14,7 +14,7 @@ Using discrete-time intervals provides a convenient approach to flexibly model t
 The foundation of the method is simple.  First create a sequence of time intervals, denoted as $t_j$ with ($j = {1,...,k}$), from the range of observed event times. Then for each interval $t_j$ obtain the number of observations with an event, along with the total number of observations at risk for having an event. Finally, the risk of event occurence within each interval $t_j$ can naively be derived as: 
 
 $$\begin{equation}
-x = 1 
+P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
 \end{equation}$$
 
 and the survival probability $S(t)$ at a time $q$, can be derived as:
@@ -81,18 +81,22 @@ The partial dependence function method is relatively simple. It involves generat
 
 The _APD_ dataset is generated so that a specific variable $x_{[I]}$ is deterministically set to a specific value for all observations while the other covariates $x_{i[O]}$ remain as observed. Each observation is then expanded over the time-intervals $1,...,j_{T_{max}}$ to create the discrete-time datasets.
 
-Mulitple _APD_ datasets can be created, each with different values of the specific variable of interest (i.e. $x_{[I]_1}$, $x_{[I]_2})$. The $p_{ij}$ values from each predicted dataset ($p_{[1]}$, $p_{[2]}$), can then be contrasted. 
+Mulitple _APD_ datasets can be created, each with different values of the specific variable of interest (i.e. $x_{[I]_1}$, $x_{[I]_2}$ ). The $p_{ij}$ values from each predicted dataset ($p_{[1]}$, $p_{[2]}$), can then be contrasted. 
 
 Common marginal effect estimates derived from these predicted values include:
 
 - Marginal difference is survival probability at time $j$:
+
 $$
-\text{Risk Diff.}_{marg} = E_{i}[S_{p_{[2]}}(t_j)]- E_{i}[S_{p_{[1]}}(t_j)]$$
+\begin{equation}
+\text{Risk Diff}_{marg} = E_{i}[S_{p_{[2]}}(t_j)]- E_{i}[S_{p_{[1]}}(t_j)]
+\end{equation}
+$$
 
 - Marginal Risk Ratio at time $j$:
 $$
 \text{RR}_{marg} = \frac {E_{i}[p_{[2]_{j}}]} {E_{i}[p_{[1]_{j}}]}
- $$
+$$
 
 
 - Marginal Hazard Ratio (assuming constant hazard rates):
