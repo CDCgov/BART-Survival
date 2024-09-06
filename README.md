@@ -27,11 +27,11 @@ where  $q \in j$.
 
 BART-Survival builds off this simple foundation by replacing $P_t$ with a probability risk estimate, $p_{t_j|x_i}$ yielded from a BART regression model for each distinct observation in the dataset and survival can be estimated as: 
 
-$
+
 \begin{equation}
 S(t_q|x_i) = \prod_{j=1}^{q} (1-p_{t_j|x_i})
 \end{equation}
-$
+
 
 To properly model $p_{t|x}$, the data requires an transformation from the standard dataset to a _augmented_ dataset. Standard survival data is given as a paired (**event status**, **event time**) outcome and set of covariates for each observation. **Event status** is typically a binary variable (1=event; 0=censored) and **event time** is some continous representation of time.
 
