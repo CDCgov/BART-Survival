@@ -13,27 +13,29 @@ Using discrete-time intervals provides a convenient approach to flexibly model t
 
 The foundation of the method is simple.  First create a sequence of time intervals, denoted as $t_j$ with ($j = {1,...,k}$), from the range of observed event times. Then for each interval $t_j$ obtain the number of observations with an event, along with the total number of observations at risk for having an event. Finally, the risk of event occurence within each interval $t_j$ can naively be derived as: 
 
-$$\begin{equation}
+```math
+\begin{equation}
 P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
-\end{equation}$$
+\end{equation}
+```
 
 and the survival probability $S(t)$ at a time $q$, can be derived as:
 
-$$
+```math
 \begin{equation}
 S(t_q) = \prod_{j=1}^{q} (1-P_{t_j}) 
 \end{equation}
-$$
+```
 
 where  $q \in j$. 
 
 BART-Survival builds off this simple foundation by replacing $P_t$ with a probability risk estimate, $p_{t_j|x_i}$ yielded from a BART regression model for each distinct observation in the dataset and survival can be estimated as: 
 
-$$
+```math
 \begin{equation}
 S(t_q|x_i) = \prod_{j=1}^{q} (1-p_{t_j|x_i})
 \end{equation}
-$$
+```
 
 To properly model $p_{t|x}$, the data requires an transformation from the standard dataset to a _augmented_ dataset. Standard survival data is given as a paired (**event status**, **event time**) outcome and set of covariates for each observation. **Event status** is typically a binary variable (1=event; 0=censored) and **event time** is some continous representation of time.
 
@@ -41,7 +43,7 @@ The _augmented_ dataset transforms the generic dataset from a single, paired (**
 
 For example if the unique set of a dataset's **event times** is **{4,6,7,8,12,14}**, and a single observation's paired outcome is (**event status** = 1, **event times** = 12), then the observation will be represented in the _augmented_ dataset as the sequence of observations:
 
-$$
+```math
 \begin{matrix} 
 \text{event status} &\text{time} \\
  --- &---\\
@@ -51,20 +53,20 @@ $$
     0 & 8 \\
     1 & 12 \\
 \end{matrix}
-$$
+```
 
 Each row in the _augmented_ dataset is treated as an independent observation, with **event status** as the outcome $Y$ and the **event time** $T$ as an added covariate. Now each of the original observations are represented by $j$ rows ($j=1,...,i_\text{event time})$ and the corresponding variables can be denoted as ($y_{ij}$, $t_{j}$, $x_{ij}$). 
 
 Using the new _augmented_ dataset, the model is simplified to a probit regression of $y_{ij}$ on time $t_{j}$ and covariates $x_{ij}$, which yields a latent value $p_{ij}$ corresponding to $P(y_{ij} = 1)$. Explicitly the model is defined as:
 
 
-$$
+```math
 \begin{align*}
     y_{ij} | p_{ij} \sim Bernoulli(p_{ij}) \\
     p_{ij} | \mu_{ij} = \Phi(\mu_{ij})\\
     \mu_{ij} \sim \text{BART}(j,x_{i})\\
 \end{align*}
-$$
+```
 
 where $\Phi$  is the CDF of the Normal distribution.
 
