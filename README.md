@@ -1,8 +1,20 @@
 ## Overview
 
-`BART-Survival` is a Python package that allows time-to-event (survival analyses) in discrete-time using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). BART-Survival combines the performance of the BART algorithm from the PyMC-BART library with the complementary data and model structural formatting required to provide a convenient approach to conducting high performance, non-parametric survival analysis. 
+`BART-Survival` is a Python package that supports discrete-time Survival analyses using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). `BART-Survival` combines the performance of the BART algorithm from the [PyMC-BART](https://www.pymc.io/projects/bart/en/latest/) library with the proper structural formatting required to complete the end-to-end Survival analysis. 
 
-This repository contains the source code and documentation for the BART_SURVIVAL package as well as user-guides/example notebooks. We additionally provide the code used in conducting the validation study of the algorithm.
+`BART-Survival`'s performance is comparative to other Survival regression methods, such as Cox Proportional Hazard and AFT models, in low-complexity settings and can outperform these other models in high-complexity settings were their respective assumptions may fail (i.e. proportional hazard assumption, linearity assumptions). Additionally, the Bayesian framework provides easily accessible uncertainty intervals and nuanced interegation of a trained model.
+
+The `BART-Survival` library provides a simple API for completing standard Survival analysis, as well as allowing exposure to the underlying PyMC code providing accessibility to extend the `BART-Survival` library when necessary.
+
+This repository contains the source code and documentation for the BART-Survival package as well as [example](https://github.com/CDCgov/BART-Survival/blob/main/examples/) notebooks. 
+
+`BART-Survival` can be installed directly from PyPi 
+```python
+pip install bart-survival==0.1.1
+```
+Or as downloaded from the repository. 
+
+
 
 ### Background
 
@@ -123,9 +135,6 @@ The BART-Survival package provide the algorithms necessary to complete the 3 maj
 
 
 
-### Installation
-Bart-Survival can be accessed directly from PyPi:
-`pip install bart-survival==0.1.1`
 
 Additonaly the whl/tar.gz and src code is accessible in the github repo:
 https://github.com/CDCgov/BART-Survival/dist
