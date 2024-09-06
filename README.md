@@ -91,7 +91,6 @@ Common marginal effect estimates derived from these predicted values include:
 
 
 ```math
-\tag{1}
 \begin{equation}
 \text{Risk Diff}_{marg} = E_{i}[S_{p_{[2]}}(t_j)] - E_{i}[S_{p_{[1]}}(t_j)]
 \end{equation}
