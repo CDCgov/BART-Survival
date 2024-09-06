@@ -89,7 +89,7 @@ Common marginal effect estimates derived from these predicted values include:
 
 $$
 \begin{equation}
-\text{Risk Diff}_{marg} = \text{E}_{ij}
+\text{Risk Diff}_{marg}
 \end{equation}
 $$
 
