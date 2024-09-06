@@ -12,20 +12,16 @@ Using discrete-time intervals provides a convenient approach to flexibly model t
 
 
 The foundation of the method is simple.  First create a sequence of time intervals, denoted as $t_j$ with ($j = {1,...,k}$), from the range of observed event times. Then for each interval $t_j$ obtain the number of observations with an event, along with the total number of observations at risk for having an event. Finally, the risk of event occurence within each interval $t_j$ can naively be derived as: 
-$$
-\tag{1}
 
-P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
-
-$$
+$$P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}$$
 
 and the survival probability $S(t)$ at a time $q$, can be derived as:
 
-$
+$$
 \begin{equation}
 S(t_q) = \prod_{j=1}^{q} (1-P_{t_j}) 
 \end{equation}
-$
+$$
 
 where  $q \in j$. 
 
