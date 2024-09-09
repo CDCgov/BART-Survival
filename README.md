@@ -54,7 +54,7 @@ S(t_q|x_i) = \prod_{j=1}^{q} (1-p_{t_j|x_i})
 ```
 Statistical estimands can also be estimated using the predicted $p_{t_j|x_i}$ through evaluation of marginal functions of the predicted values. 
 
-To properly model $p_{t|x}$, the data requires an transformation from a standard Survival dataset to a _augmented_ dataset. Survival data is typically given as a paired (**event status**, **event time**) outcome, along with a set of covariates for each observation. In this setup **event status** is typically a binary variable (1=event; 0=censored) and **event time** is some continuous representation of time.
+To properly model $p_{t|x}$ the data requires an transformation from a standard Survival dataset to a _augmented_ dataset. Survival data is typically given as a paired (**event status**, **event time**) outcome, along with a set of covariates for each observation. In this setup **event status** is typically a binary variable (1=event; 0=censored) and **event time** is some continuous representation of time.
 
 The _augmented_ dataset transforms the generic dataset from a single, paired (**event status**, **event time**) outcome per observation, to a sequence of single (**event status**) outcomes over the series of discrete-time intervals, up to the given **event time** for the observation. 
 
