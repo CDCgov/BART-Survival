@@ -57,17 +57,13 @@ The foundation of the method is simple.
 3. Finally, the risk of event occurrence within each interval $t_j$ can naively be derived as: 
 
 $$
-\begin{equation}
 P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
-\end{equation}
 $$
 
 and the Survival probability $S(t)$ at a time $q$, can be derived as:
 
 $$
-\begin{equation}
 S(t_q) = \prod_{j=1}^{q} (1-P_{t_j}) 
-\end{equation}
 $$
 
 `BART-Survival` builds off this simple foundation by replacing $P_t$ with a probability risk estimate, $p_{t_j|x_i}$ yielded from the BART regression model. The predicted values $p_{t_j|x_i}$ are generated for each observation, at each time interval from the set $j$. Downstream targets can be further derived from these predicted values with observation-level Survival derived as:
