@@ -14,6 +14,9 @@ pip install `BART-Survival`==0.1.1
 ```
 Or as accessed from this repository. 
 
+### API
+[BART-Survival API](https://cdcgov.github.io/`BART-Survival`/build/html/index.html) 
+
 
 
 ### Background
@@ -95,7 +98,7 @@ With `BART-Survival`, the underlying BART algorithm does not rely on a linear eq
 
 The partial dependence function method is relatively simple. It involves generating predictions of $p$ from a trained `BART-Survival` model using a _augmented partial dependence_ (_APD_) dataset as input. 
 
-The _APD_ dataset is generated so that a specific variable $x_{[I]}$ is deterministically set to a specific value for all observations while the other covariates $`x_{[O]_i}`$ remain as observed. Each observation is then expanded over the time-intervals $1,...,j_{T_{max}}$ to create the discrete-time datasets.
+The _APD_ dataset is generated so that a specific variable $x_{[I]}$ is deterministically set to a specific value for all observations while the other covariates $`x_{[O]_i}`$ remain as observed. Each observation is then expanded over the time-intervals $1,...,j_{T_{max}}$ to create the discrete-time datasets. Here $`j_{T_{max}}`$ is the maximum time across all **event times**.
 
 To estimate the effect of an variable on the outcome, multiple _APD_ datasets are created. Each _APD_ dataset varies the value of the specific variable of interest (i.e. $`x_{[I]_1}`$, $`x_{[I]_2}`$ ), allowing evaluation of the outcome under different conditions of that variable. The $p_{ij}$ values from each predicted dataset ($p_{[1]}$, $p_{[2]}$), can be used to obtain the marginal estimates of a specific outcome. 
 
@@ -124,7 +127,7 @@ Common marginal effect estimates derived from these predicted values include:
 
 For users familiar with causal inference literature, these partial dependence functions are similar to the g-estimation and counterfactual outcomes methods common to the causal inference field.
 
-In addition to providing point estimates, the `BART-Survival` naturally generates bayesian credible intervals as a product of the posterior predictive distribution. The credible intervals can provide useful measure of uncertainty and allows for bayesian variants of hypothesis testing and statistical inference to be made on the estimates.
+In addition to providing point estimates, the `BART-Survival` naturally generates Bayesian credible intervals as a product of the posterior predictive distribution. The credible intervals can provide useful measure of uncertainty and allows for bayesian variants of hypothesis testing and statistical inference to be made on the estimates.
 
 
 #### Summary
@@ -133,24 +136,86 @@ The `BART-Survival` package provide the algorithms necessary to complete the 3 m
 
 1. Generate augmented dataset
 2. Train-predict-transform the BART model and estimates
-3. Generate _augmented partial dependece_ datasets and generate estimates.
+3. Generate _augmented partial dependece_ datasets and generating marginal estimates.
 
-
-
-
-
-
-Additonaly the whl/tar.gz and src code is accessible in the github repo:
-https://github.com/CDCgov/`BART-Survival`/dist
-https://github.com/CDCgov/`BART-Survival`/src
 
 ### Demonstration
 
+Brief demo of the basic steps.
+
+```python
+from lifelines.datasets import load_rossi
+from bart_survival import surv_bart as sb
+import numpy as np
+
+######################################
+# Load rossi dataset from lifelines
+rossi = load_rossi()
+names = rossi.columns.to_numpy()
+rossi = rossi.to_numpy()
+
+######################################
+# Transform data into 'augmented' dataset
+# Requires creation of the training dataset and a predictive dataset for inference
+trn = sb.get_surv_pre_train(
+    y_time=rossi[:,0],
+    y_status=rossi[:,1],
+    x = rossi[:,2:],
+    time_scale=7
+)
+
+post_test = sb.get_posterior_test(
+    y_time=rossi[:,0],
+    y_status=rossi[:,1],
+    x = rossi[:,2:],
+    time_scale=7
+)
+
+######################################
+# Instantiate the BART models
+# model_dict is defines specific model parameters
+model_dict = {"trees": 50,
+    "split_rules": [
+        "pmb.ContinuousSplitRule()", # time
+        "pmb.OneHotSplitRule()", # fin
+        "pmb.ContinuousSplitRule()",  # age
+        "pmb.OneHotSplitRule()", # race
+        "pmb.OneHotSplitRule()", # wexp
+        "pmb.OneHotSplitRule()", # mar
+        "pmb.OneHotSplitRule()", # paro
+        "pmb.ContinuousSplitRule()", # prio
+    ]
+}
+# sampler_dict defines specific sampling parameters
+sampler_dict = {
+            "draws": 200,
+            "tune": 200,
+            "cores": 8,
+            "chains": 8,
+            "compute_convergence_checks": False
+        }
+BSM = sb.BartSurvModel(model_config=model_dict, sampler_config=sampler_dict)
+
+#####################################
+# Fit Model
+BSM.fit(
+    y =  trn["y"],
+    X = trn["x"],
+    weights=trn["w"],
+    coords = trn["coord"],
+    random_seed=5
+)
+
+# Get posterior predictive for evaluation.
+post1 = BSM.sample_posterior_predictive(X_pred=post_test["post_x"], coords=post_test["coords"])
+
+# Convert to SV probability.
+sv_prob = sb.get_sv_prob(post1)
+
+```
 
 
 
-### API
-https://cdcgov.github.io/`BART-Survival`/build/html/index.html
 
 ### User Guide/Example Notebooks
 https://github.com/CDCgov/`BART-Survival`/blob/main/examples/example1.ipynb
@@ -159,8 +224,10 @@ https://github.com/CDCgov/`BART-Survival`/blob/main/examples/example2.ipynb
 
 
 ### Validation study links
-**COMING SOON**
+In progress...
 
+---
+---
 # CDCgov General Disclaimers
 This repository was created for use by CDC programs to collaborate on public health related projects in support of the [CDC mission](https://www.cdc.gov/about/organization/mission.htm).  GitHub is not hosted by the CDC, but is a third party website used by CDC and its partners to share information and collaborate on software. CDC use of GitHub does not imply an endorsement of any one particular service, product, or enterprise. 
 
