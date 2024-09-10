@@ -15,7 +15,7 @@ pip install `BART-Survival`==0.1.1
 Or as accessed from this repository. 
 
 ### API
-[BART-Survival API](https://cdcgov.github.io/`BART-Survival`/build/html/index.html) 
+[BART-Survival API](https://cdcgov.github.io/BART-Survival/build/html/index.html) 
 
 
 
