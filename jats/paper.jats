@@ -165,8 +165,10 @@ a Creative Commons Attribution 4.0 International License (CC BY
   here combines the survival analysis approach outlined in the
   <monospace>BART</monospace> R package with the foundational
   Python-based probabilistic programming language library,
-  <monospace>PyMC</monospace>[&amp;abril-pla2023], and the accompanying
-  BART algorithm from the <monospace>PyMC-BART</monospace> library
+  <monospace>PyMC</monospace>
+  (<xref alt="Abril-Pla et al., 2023" rid="ref-abril-pla2023" ref-type="bibr">Abril-Pla
+  et al., 2023</xref>), and the accompanying BART algorithm from the
+  <monospace>PyMC-BART</monospace> library
   (<xref alt="Quiroga et al., 2023" rid="ref-quiroga2023" ref-type="bibr">Quiroga
   et al., 2023</xref>). Our aim in developing
   <monospace>BART-Survival</monospace> is to provide accessibility to
@@ -553,6 +555,35 @@ a Creative Commons Attribution 4.0 International License (CC BY
       <pub-id pub-id-type="doi">10.1002/sim.6893</pub-id>
       <fpage>2741</fpage>
       <lpage>2753</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-abril-pla2023">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Abril-Pla</surname><given-names>Oriol</given-names></name>
+        <name><surname>Andreani</surname><given-names>Virgile</given-names></name>
+        <name><surname>Carroll</surname><given-names>Colin</given-names></name>
+        <name><surname>Dong</surname><given-names>Larry</given-names></name>
+        <name><surname>Fonnesbeck</surname><given-names>Christopher J.</given-names></name>
+        <name><surname>Kochurov</surname><given-names>Maxim</given-names></name>
+        <name><surname>Kumar</surname><given-names>Ravin</given-names></name>
+        <name><surname>Lao</surname><given-names>Junpeng</given-names></name>
+        <name><surname>Luhmann</surname><given-names>Christian C.</given-names></name>
+        <name><surname>Martin</surname><given-names>Osvaldo A.</given-names></name>
+        <name><surname>Osthege</surname><given-names>Michael</given-names></name>
+        <name><surname>Vieira</surname><given-names>Ricardo</given-names></name>
+        <name><surname>Wiecki</surname><given-names>Thomas</given-names></name>
+        <name><surname>Zinkov</surname><given-names>Robert</given-names></name>
+      </person-group>
+      <article-title>PyMC: A modern, and comprehensive probabilistic programming framework in Python</article-title>
+      <source>PeerJ Computer Science</source>
+      <year iso-8601-date="2023-09">2023</year><month>09</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2024-04-15">2024</year><month>04</month><day>15</day></date-in-citation>
+      <volume>9</volume>
+      <issn>2376-5992</issn>
+      <pub-id pub-id-type="doi">10.7717/peerj-cs.1516</pub-id>
+      <fpage>e1516</fpage>
+      <lpage></lpage>
     </element-citation>
   </ref>
   <ref id="ref-altman1998">
