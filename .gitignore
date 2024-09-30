@@ -12,3 +12,6 @@ dump/
 .vscode/
 todo.txt
 todo.md
+paper_todo.md
+.RData
+.Rhistory

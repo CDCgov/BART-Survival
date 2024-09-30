@@ -6,7 +6,7 @@
 
 The ``BART-Survival`` library provides a simple API for completing standard Survival analysis, as well as allowing exposure to the underlying PyMC code providing accessibility to extend the ``BART-Survival`` library when necessary.
 
-This repository contains the source code and documentation for the `BART-Survival` package as well as [example](https://github.com/CDCgov/`BART-Survival`/blob/main/examples/) notebooks. 
+This repository contains the source code and documentation for the `BART-Survival` package as well as [example](https://github.com/CDCgov/BART-Survival/tree/main/examples/) notebooks. 
 
 ``BART-Survival`` can be installed directly from PyPi 
 ```python
