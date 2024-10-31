@@ -161,8 +161,9 @@ a Creative Commons Attribution 4.0 International License (CC BY
   (<xref alt="R. Sparapani et al., 2021" rid="ref-sparapani2021" ref-type="bibr">R.
   Sparapani et al., 2021</xref>;
   <xref alt="R. A. Sparapani et al., 2016" rid="ref-sparapani2016" ref-type="bibr">R.
-  A. Sparapani et al., 2016</xref>). BART-Survival package described
-  here combines the survival analysis approach outlined in the
+  A. Sparapani et al., 2016</xref>). The
+  <monospace>BART-Survival</monospace> package described here combines
+  the survival analysis approach outlined in the
   <monospace>BART</monospace> R package with the foundational
   Python-based probabilistic programming language library,
   <monospace>PyMC</monospace>
@@ -172,26 +173,48 @@ a Creative Commons Attribution 4.0 International License (CC BY
   (<xref alt="Quiroga et al., 2023" rid="ref-quiroga2023" ref-type="bibr">Quiroga
   et al., 2023</xref>). Our aim in developing
   <monospace>BART-Survival</monospace> is to provide accessibility to
-  the BART survival algorithm within the Python programing language.
+  the BART survival algorithm within the Python programming language.
   This contribution is beneficial for analysts when Python is the
   preferred programming language, the analytic workflow is Python-based,
-  or when the R language is unavailable for analyses. Additionally,
-  <monospace>BART-Survival</monospace> package abstracts away the
-  complexities of the <monospace>PyMC</monospace> and
-  <monospace>PyMC-BART</monospace> libraries through use of a
-  pre-specified core model and generalized functionality that can
-  accommodate analyses across various survival settings. The
-  <monospace>BART-Survival</monospace> package is intended for public
-  health and clinical professionals and students who are looking for
-  non-parametric alternatives to traditional (semi-)parametric survival
-  analysis, especially for use in large, complex healthcare data and
-  machine learning applications.</p>
+  or when the R language is unavailable for analyses.</p>
+  <p>The need for a complete <monospace>BART-Survival</monospace> python
+  package is given by the simple fact that the BART survival algorithm
+  is non-trivial to implement. Both the required data transformations
+  and the internal model definition requires precise implementations to
+  ensure generation of accurate survival models. Our
+  <monospace>BART-Survival</monospace> library provides accessibility to
+  these precise methods while removing the technical barriers that would
+  limit user adoption of the BART survival approach.</p>
+  <p>More specifically, the <monospace>BART-Survival</monospace> library
+  abstracts away the complexities of generating the proper training and
+  inference datasets, which are conceptually complex and prone to being
+  specified incorrectly if implemented from scratch. Similarly, the
+  <monospace>BART-Survival</monospace> library provides a pre-specified
+  internal Bayesian model using the <monospace>PyMC</monospace>
+  probabilistic programming language. This pre-specified model is
+  primarily accessed through the <monospace>BART-Survival</monospace>
+  API removing the requirement for users to have more than a cursory
+  knowledge of the <monospace>PyMC</monospace> or
+  <monospace>PyMC-BART</monospace> libraries. Since the
+  <monospace>BART-Survival</monospace> package is intended for students
+  and professional in the public health and clinical fields, it is
+  expected users of the <monospace>BART-Survival</monospace> library
+  will not have extensive programming expertise, adding to the need for
+  a full contained and accessible approach.</p>
+  <p>In summary the <monospace>BART-Survival</monospace> package
+  provides a simple and accessible approach to implementing the BART
+  survival algorithm. The provided approach can be beneficial for users
+  who are looking for non-parametric alternatives to traditional
+  (semi-)parametric survival analysis. The BART survival algorithm can
+  be especially useful in large, complex healthcare data, where machine
+  learning methods can demonstrate improved performance over the
+  traditional methods.</p>
 </sec>
 <sec id="methods">
   <title>Methods</title>
   <p>The following sections provides details on the methods employed by
   the <monospace>BART-Survival</monospace> library, focusing
-  specifically on the discrete-time Survival algorithm used. For review
+  specifically on the discrete-time survival algorithm used. For review
   of the BART algorithm we refer to associated
   <monospace>PyMC-BART</monospace> publication
   (<xref alt="Quiroga et al., 2023" rid="ref-quiroga2023" ref-type="bibr">Quiroga
@@ -199,7 +222,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
   <sec id="background">
     <title>Background</title>
     <p>The <monospace>BART-Survival</monospace> package provides a
-    discrete-time Survival method which aims to model Survival as a
+    discrete-time survival method which aims to model survival as a
     function of a series of probabilities that indicate the probability
     of event occurrence at each discrete time. For clarity, the
     probability of event occurrence at each discrete time will be
@@ -208,9 +231,16 @@ a Creative Commons Attribution 4.0 International License (CC BY
     discrete-time algorithm allows for flexible modeling of the risk
     probabilities as a non-parametric function of time and observed
     covariates. The series of probability risks can then be used to
-    derive the Survival probabilities, along with other estimates of
+    derive the survival probabilities, along with other estimates of
     interest.</p>
-    <p>The foundation of the method is simple.</p>
+    <p>The foundation of the method is simple and is based off the
+    well-defined Kaplan-Meier Product-Limit estimator. While a full
+    review of the Kaplan-Meier method can be found elsewhere
+    (<xref alt="Stel Vianda S., 2011" rid="ref-stel2011" ref-type="bibr">Stel
+    Vianda S., 2011</xref>), the following example demonstrates the
+    fundamental concepts of discrete-time survival analysis that
+    motivates its application within the
+    <monospace>BART-Survial</monospace> method.</p>
     <list list-type="order">
       <list-item>
         <p>Starting with a simple event-time dataset, create a sequence
@@ -257,20 +287,20 @@ a Creative Commons Attribution 4.0 International License (CC BY
          \begin{matrix} 
          \text{index} &\text{interval} \\
          --- &---\\
-             t_1 & [0,1) \\
-             t_2 & [1,2) \\
-             t_3 & [2,4) \\
-             t_4 & [4,5) \\
+             t_1 & (0,1] \\
+             t_2 & (1,2] \\
+             t_3 & (2,4] \\
+             t_4 & (4,5] \\
          \end{matrix}
          ]]></tex-math>
-        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">interval</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>0</mml:mn><mml:mo>,</mml:mo><mml:mn>1</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>2</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>2</mml:mn><mml:mo>,</mml:mo><mml:mn>4</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>5</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
-        <p>Where the intervals are denoted with the properties,
-        “<inline-formula><alternatives>
-        <tex-math><![CDATA[[]]></tex-math>
-        <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mo stretchy="false" form="prefix">[</mml:mo></mml:math></alternatives></inline-formula>”
+        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">interval</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>0</mml:mn><mml:mo>,</mml:mo><mml:mn>1</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>2</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>2</mml:mn><mml:mo>,</mml:mo><mml:mn>4</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>5</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
+        <p>In the table above the intervals are denoted with the
+        properties, “<inline-formula><alternatives>
+        <tex-math><![CDATA[(]]></tex-math>
+        <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mo stretchy="false" form="prefix">(</mml:mo></mml:math></alternatives></inline-formula>”
         indicating exclusive times and “<inline-formula><alternatives>
-        <tex-math><![CDATA[)]]></tex-math>
-        <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:math></alternatives></inline-formula>”
+        <tex-math><![CDATA[]]]></tex-math>
+        <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:math></alternatives></inline-formula>”
         indicating inclusive times in an interval. Additionally, the
         <bold>event status</bold> column is defined as
         <inline-formula><alternatives>
@@ -302,13 +332,13 @@ a Creative Commons Attribution 4.0 International License (CC BY
          \begin{matrix} 
          \text{index} &\text{interval} &\text{event} &\text{censor} & \text{at risk}\\
          --- &---&---&---&---\\
-             t_1 & [0,1) & 1  &   & 6 \\
-             t_2 & [1,2) &  1 & 1 & 5 \\
-             t_3 & [2,4) &  2 &   & 3 \\
-             t_4 & [4,5) &  1 &   & 1 \\
+             t_1 & (0,1] & 1  &   & 6 \\
+             t_2 & (1,2] &  1 & 1 & 5 \\
+             t_3 & (2,4] &  2 &   & 3 \\
+             t_4 & (4,5] &  1 &   & 1 \\
          \end{matrix}
          ]]></tex-math>
-        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">interval</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">event</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">censor</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">at risk</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>0</mml:mn><mml:mo>,</mml:mo><mml:mn>1</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>6</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>2</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>5</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>2</mml:mn><mml:mo>,</mml:mo><mml:mn>4</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>3</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>5</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
+        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">interval</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">event</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">censor</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">at risk</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>0</mml:mn><mml:mo>,</mml:mo><mml:mn>1</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>6</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>2</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>5</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>2</mml:mn><mml:mo>,</mml:mo><mml:mn>4</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>3</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>5</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
       </list-item>
       <list-item>
         <p>Finally, the risk of event occurrence within each interval
@@ -318,19 +348,19 @@ a Creative Commons Attribution 4.0 International License (CC BY
         can simply be derived as:</p>
         <p><disp-formula><alternatives>
         <tex-math><![CDATA[
-         P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}}
+         P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}} \text{,}
          ]]></tex-math>
-        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>P</mml:mi><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub><mml:mo>=</mml:mo><mml:mfrac><mml:msub><mml:mtext mathvariant="normal">n events</mml:mtext><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub><mml:msub><mml:mtext mathvariant="normal">n at risk</mml:mtext><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub></mml:mfrac></mml:mrow></mml:math></alternatives></disp-formula></p>
-        <p>and the Survival probability at a time-index
+        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>P</mml:mi><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub><mml:mo>=</mml:mo><mml:mfrac><mml:msub><mml:mtext mathvariant="normal">n events</mml:mtext><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub><mml:msub><mml:mtext mathvariant="normal">n at risk</mml:mtext><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub></mml:mfrac><mml:mtext mathvariant="normal">,</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
+        <p>and the survival probability at a time-index
         <inline-formula><alternatives>
         <tex-math><![CDATA[j]]></tex-math>
         <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>j</mml:mi></mml:math></alternatives></inline-formula>,
         can be derived as:</p>
         <p><disp-formula><alternatives>
         <tex-math><![CDATA[
-         S(t_j) = \prod_{q=1}^{j} (1-P_{t_q}) 
+         S(t_j) = \prod_{q=1}^{j} (1-P_{t_q}) \text{ .}
          ]]></tex-math>
-        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:munderover><mml:mo>∏</mml:mo><mml:mrow><mml:mi>q</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>j</mml:mi></mml:munderover><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>−</mml:mo><mml:msub><mml:mi>P</mml:mi><mml:msub><mml:mi>t</mml:mi><mml:mi>q</mml:mi></mml:msub></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mrow></mml:math></alternatives></disp-formula></p>
+        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:munderover><mml:mo>∏</mml:mo><mml:mrow><mml:mi>q</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>j</mml:mi></mml:munderover><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>−</mml:mo><mml:msub><mml:mi>P</mml:mi><mml:msub><mml:mi>t</mml:mi><mml:mi>q</mml:mi></mml:msub></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mrow><mml:mspace width="0.333em"></mml:mspace><mml:mtext mathvariant="normal"> .</mml:mtext></mml:mrow></mml:mrow></mml:math></alternatives></disp-formula></p>
         <p>Applied to our example the risks of event
         <inline-formula><alternatives>
         <tex-math><![CDATA[P_{t_j}]]></tex-math>
@@ -341,21 +371,21 @@ a Creative Commons Attribution 4.0 International License (CC BY
          \begin{matrix} 
          \text{index} &\text{interval} &\text{event} &\text{censor} & \text{at risk} & P_{t_j} \\
          --- &---&---&---&---&---    \\
-         t_1 & [0,1) & 1  &   & 6 & 0.167 \\
-         t_2 & [1,2) &  1 & 1 & 5 &  0.2 \\
-         t_3 & [2,4) &  2 &   & 3 &  0.667 \\
-         t_4 & [4,5) &  1 &   & 1 &  1.0 \\
+         t_1 & (0,1] & 1  &   & 6 & 0.167 \\
+         t_2 & (1,2] &  1 & 1 & 5 &  0.2 \\
+         t_3 & (2,4] &  2 &   & 3 &  0.667 \\
+         t_4 & (4,5] &  1 &   & 1 &  1.0 \\
          \end{matrix}
          ]]></tex-math>
-        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">interval</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">event</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">censor</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">at risk</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>P</mml:mi><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>0</mml:mn><mml:mo>,</mml:mo><mml:mn>1</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>6</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.167</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>2</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>5</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.2</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>2</mml:mn><mml:mo>,</mml:mo><mml:mn>4</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>3</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.667</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">[</mml:mo><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>5</mml:mn><mml:mo stretchy="false" form="postfix">)</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1.0</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
-        <p>And the corresponding Survival estimates at times
+        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">interval</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">event</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">censor</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">at risk</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>P</mml:mi><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:msub></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>0</mml:mn><mml:mo>,</mml:mo><mml:mn>1</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>6</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.167</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>2</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>5</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.2</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>2</mml:mn><mml:mo>,</mml:mo><mml:mn>4</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>3</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.667</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>5</mml:mn><mml:mo stretchy="false" form="postfix">]</mml:mo></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1.0</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
+        <p>And the corresponding survival estimates at times
         <inline-formula><alternatives>
         <tex-math><![CDATA[[1,2,4,5]]]></tex-math>
         <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>2</mml:mn><mml:mo>,</mml:mo><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>5</mml:mn><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:math></alternatives></inline-formula>
         are: <disp-formula><alternatives>
         <tex-math><![CDATA[
          \begin{matrix} 
-         \text{index} &\text{time} & \text{Survival} \\
+         \text{index} &\text{time} & \text{survival} \\
          ---&--- &---\\
          t_1  &  1 &  .83\\
          t_2  &  2 &  .67 \\
@@ -363,7 +393,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
          t_4  &  5 &  0 \\
          \end{matrix}
          ]]></tex-math>
-        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">time</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">Survival</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>.83</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>.67</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>4</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>.22</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>5</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
+        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">index</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">time</mml:mtext></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mtext mathvariant="normal">survival</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi><mml:mo>−</mml:mo><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>1</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>.83</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>.67</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>3</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>4</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>.22</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>t</mml:mi><mml:mn>4</mml:mn></mml:msub></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>5</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
       </list-item>
     </list>
     <p><monospace>BART-Survival</monospace> builds off this simple
@@ -388,8 +418,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
     The predicted values <inline-formula><alternatives>
     <tex-math><![CDATA[p_{t_j|x_{ij}}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>
-    can be further transformed into Survival probability estimates or
-    other estimands of interest. Formally, the Survival probability
+    can be further transformed into survival probability estimates or
+    other estimands of interest. Formally, the survival probability
     estimate for a single observation <inline-formula><alternatives>
     <tex-math><![CDATA[i]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>i</mml:mi></mml:math></alternatives></inline-formula>
@@ -399,13 +429,13 @@ a Creative Commons Attribution 4.0 International License (CC BY
     can be derived as:</p>
     <p><disp-formula><alternatives>
     <tex-math><![CDATA[
-    S(t_j|x_i) = \prod_{q=1}^{j} (1-p_{t_q|x_{iq}})
+    S(t_j|x_i) = \prod_{q=1}^{j} (1-p_{t_q|x_{iq}}) \text{.}
     ]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:munderover><mml:mo>∏</mml:mo><mml:mrow><mml:mi>q</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>j</mml:mi></mml:munderover><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>−</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>t</mml:mi><mml:mi>q</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>q</mml:mi></mml:mrow></mml:msub></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mrow></mml:math></alternatives></disp-formula></p>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:munderover><mml:mo>∏</mml:mo><mml:mrow><mml:mi>q</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>j</mml:mi></mml:munderover><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>−</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>t</mml:mi><mml:mi>q</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>q</mml:mi></mml:mrow></mml:msub></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mtext mathvariant="normal">.</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
   </sec>
   <sec id="data-preparation">
     <title>Data Preparation</title>
-    <p>As displayed in the above example, Survival data is typically
+    <p>As displayed in the above example, survival data is typically
     given as paired (<italic>event status</italic>, <italic>event
     time</italic>) outcomes, along with a set of covariates
     <inline-formula><alternatives>
@@ -422,9 +452,9 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <p>Obtaining the <inline-formula><alternatives>
     <tex-math><![CDATA[p_{t_j|x_{ij}}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>
-    values and subsequent Survival estimates is a two-step process. Each
+    values and subsequent survival estimates is a two-step process. Each
     step of the process requires generating a specialized augmented
-    datasets from the generic Survival data. The first step in the
+    datasets from the generic survival data. The first step in the
     process involves training the <inline-formula><alternatives>
     <tex-math><![CDATA[\text{BART}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtext mathvariant="normal">BART</mml:mtext></mml:math></alternatives></inline-formula>
@@ -482,8 +512,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mo>=</mml:mo></mml:math></alternatives></inline-formula>
     <italic>event time</italic><inline-formula><alternatives>
     <tex-math><![CDATA[_i]]></tex-math>
-    <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi></mml:mi><mml:mi>i</mml:mi></mml:msub></mml:math></alternatives></inline-formula>.
-    This special index <inline-formula><alternatives>
+    <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi></mml:mi><mml:mi>i</mml:mi></mml:msub></mml:math></alternatives></inline-formula>
+    . This special index <inline-formula><alternatives>
     <tex-math><![CDATA[j]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>j</mml:mi></mml:math></alternatives></inline-formula>
     is denoted as <inline-formula><alternatives>
@@ -491,8 +521,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>m</mml:mi><mml:mi>i</mml:mi></mml:msub></mml:math></alternatives></inline-formula>
     and can be defined as:</p>
     <p><disp-formula><alternatives>
-    <tex-math><![CDATA[ t_{m_i} = t_j = \text{event time}_i]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>t</mml:mi><mml:msub><mml:mi>m</mml:mi><mml:mi>i</mml:mi></mml:msub></mml:msub><mml:mo>=</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo>=</mml:mo><mml:msub><mml:mtext mathvariant="normal">event time</mml:mtext><mml:mi>i</mml:mi></mml:msub></mml:mrow></mml:math></alternatives></disp-formula></p>
+    <tex-math><![CDATA[ t_{m_i} = t_j = \text{event time}_i \text{.}]]></tex-math>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>t</mml:mi><mml:msub><mml:mi>m</mml:mi><mml:mi>i</mml:mi></mml:msub></mml:msub><mml:mo>=</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo>=</mml:mo><mml:msub><mml:mtext mathvariant="normal">event time</mml:mtext><mml:mi>i</mml:mi></mml:msub><mml:mtext mathvariant="normal">.</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
     <p>For each observation, a set of tuples is created containing a
     total of <inline-formula><alternatives>
     <tex-math><![CDATA[m_i]]></tex-math>
@@ -521,7 +551,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <tex-math><![CDATA[_i]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi></mml:mi><mml:mi>i</mml:mi></mml:msub></mml:math></alternatives></inline-formula>.
     Covariate information is simply replicated across tuples.</p>
-    <p>For example if the Survival data is:
+    <p>For example if the survival data is:
     <disp-formula><tex-math><![CDATA[
         \left[
         \begin{matrix} 
@@ -615,7 +645,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mn>0</mml:mn></mml:math></alternatives></inline-formula>)
     represents the outcome and <italic>time</italic> is a covariate.
     Then treating each row of the <bold>TAD</bold> as an independent
-    observation, the outcome can be modeled as a probit regression of
+    observation, the outcome can be modeled as a binary regression of
     <italic>status</italic> over <italic>time</italic> and any
     additional covariates <inline-formula><alternatives>
     <tex-math><![CDATA[x]]></tex-math>
@@ -639,7 +669,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     and time <inline-formula><alternatives>
     <tex-math><![CDATA[t_j]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub></mml:math></alternatives></inline-formula>
-    can be used to yield the various analytic targets, such as Survival
+    can be used to yield the various analytic targets, such as survival
     probabilities.</p>
     <p>To generate the predictions of probability risks over the
     observed times the <bold>PAD</bold> dataset is used. The
@@ -726,7 +756,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <tex-math><![CDATA[_i]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi></mml:mi><mml:mi>i</mml:mi></mml:msub></mml:math></alternatives></inline-formula>.
     The <bold>TAD</bold> length can be calculated as:</p>
-    <p><disp-formula><tex-math><![CDATA[ \bold{TAD}_{\text{length}} = \sum_{i=1}^{n}{m_i}]]></tex-math></disp-formula></p>
+    <p><disp-formula><tex-math><![CDATA[ \bold{TAD}_{\text{length}} = \sum_{i=1}^{n}{m_i} \text{.}]]></tex-math></disp-formula></p>
     <p>This can be demonstrated with the example dataset where the
     <bold>TAD</bold> length can be found as the sum of the
     <inline-formula><alternatives>
@@ -767,8 +797,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <tex-math><![CDATA[27]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mn>27</mml:mn></mml:math></alternatives></inline-formula>
     and <inline-formula><alternatives>
-    <tex-math><![CDATA[36]]></tex-math>
-    <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mn>36</mml:mn></mml:math></alternatives></inline-formula>
+    <tex-math><![CDATA[48]]></tex-math>
+    <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mn>48</mml:mn></mml:math></alternatives></inline-formula>
     rows respectively.</p>
     <p>When the length of the two datasets become large enough to make
     computation difficult it is recommended to downscale the
@@ -822,9 +852,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <inline-formula><alternatives>
     <tex-math><![CDATA[4,8,12,16]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>8</mml:mn><mml:mo>,</mml:mo><mml:mn>12</mml:mn><mml:mo>,</mml:mo><mml:mn>16</mml:mn></mml:mrow></mml:math></alternatives></inline-formula>
-    will be equal to the of the probability of event from a
-    non-downscaled dataset at the select time
-    <inline-formula><alternatives>
+    will be equal to the probability of event from a non-downscaled
+    dataset at the select time <inline-formula><alternatives>
     <tex-math><![CDATA[4,8,12,16]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mn>4</mml:mn><mml:mo>,</mml:mo><mml:mn>8</mml:mn><mml:mo>,</mml:mo><mml:mn>12</mml:mn><mml:mo>,</mml:mo><mml:mn>16</mml:mn></mml:mrow></mml:math></alternatives></inline-formula>.</p>
     <p>Downscaling can be safely applied to datasets without loss of
@@ -941,13 +970,13 @@ a Creative Commons Attribution 4.0 International License (CC BY
     Formally the model is defined as: <disp-formula><alternatives>
     <tex-math><![CDATA[
     \begin{aligned}
-        y_{ij} | p_{ij} \sim Bernoulli(p_{ij}) \\
-        p_{ij} | \mu_{ij} = \Phi(\mu_{ij})\\
-        \mu_{ij} \sim \text{BART}(t_{ij},x_{ij})\\
+        y_{ij} | p_{ij} \sim Bernoulli(p_{ij}) \text{,}\\
+        p_{ij} | \mu_{ij} = \Phi(\mu_{ij}) \text{,}\\
+        \mu_{ij} \sim \text{BART}(t_{ij},x_{ij}) \text{,}\\
     \end{aligned}
     ]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="right" style="text-align: right"><mml:msub><mml:mi>y</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>∼</mml:mo><mml:mi>B</mml:mi><mml:mi>e</mml:mi><mml:mi>r</mml:mi><mml:mi>n</mml:mi><mml:mi>o</mml:mi><mml:mi>u</mml:mi><mml:mi>l</mml:mi><mml:mi>l</mml:mi><mml:mi>i</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="right" style="text-align: right"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>μ</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>=</mml:mo><mml:mi>Φ</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>μ</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="right" style="text-align: right"><mml:msub><mml:mi>μ</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>∼</mml:mo><mml:mtext mathvariant="normal">BART</mml:mtext><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>,</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="right" style="text-align: right"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
-    <p>Where <inline-formula><alternatives>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="right" style="text-align: right"><mml:msub><mml:mi>y</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>∼</mml:mo><mml:mi>B</mml:mi><mml:mi>e</mml:mi><mml:mi>r</mml:mi><mml:mi>n</mml:mi><mml:mi>o</mml:mi><mml:mi>u</mml:mi><mml:mi>l</mml:mi><mml:mi>l</mml:mi><mml:mi>i</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mtext mathvariant="normal">,</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="right" style="text-align: right"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>μ</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>=</mml:mo><mml:mi>Φ</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>μ</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mtext mathvariant="normal">,</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="right" style="text-align: right"><mml:msub><mml:mi>μ</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>∼</mml:mo><mml:mtext mathvariant="normal">BART</mml:mtext><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo>,</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mtext mathvariant="normal">,</mml:mtext></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="right" style="text-align: right"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
+    <p>where <inline-formula><alternatives>
     <tex-math><![CDATA[\Phi]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>Φ</mml:mi></mml:math></alternatives></inline-formula>
     is the normal cumulative distribution function and
@@ -1034,7 +1063,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     algorithm can be found in <monospace>PyMC-BART</monospace>
     repository and the accompanying publication
     (<xref alt="Quiroga et al., 2023" rid="ref-quiroga2023" ref-type="bibr">Quiroga
-    et al., 2023</xref>)</p>
+    et al., 2023</xref>).</p>
   </sec>
   <sec id="survival">
     <title>Survival</title>
@@ -1043,20 +1072,20 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <inline-formula><alternatives>
     <tex-math><![CDATA[p_{ij}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>
-    predictions. To generate Survival estimates the
+    predictions. To generate survival estimates the
     <inline-formula><alternatives>
     <tex-math><![CDATA[p_{ij}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>
     vector is grouped by the <inline-formula><alternatives>
     <tex-math><![CDATA[i]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>i</mml:mi></mml:math></alternatives></inline-formula>
-    indices. Then using the following equation the Survival probability
+    indices. Then using the following equation the survival probability
     at discrete times can be constructed: <disp-formula><alternatives>
     <tex-math><![CDATA[
-    S(t_{q}| x_{iq}) = \prod_{j=1}^{q} (1-p_{ij})
+    S(t_{q}| x_{iq}) = \prod_{j=1}^{q} (1-p_{ij}) \text{,}
     ]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>q</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>q</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:munderover><mml:mo>∏</mml:mo><mml:mrow><mml:mi>j</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>q</mml:mi></mml:munderover><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>−</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mrow></mml:math></alternatives></disp-formula></p>
-    <p>Where <inline-formula><alternatives>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>S</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>q</mml:mi></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>q</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:munderover><mml:mo>∏</mml:mo><mml:mrow><mml:mi>j</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>q</mml:mi></mml:munderover><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>−</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mtext mathvariant="normal">,</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
+    <p>where <inline-formula><alternatives>
     <tex-math><![CDATA[q]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>q</mml:mi></mml:math></alternatives></inline-formula>
     is the index of the time for the desired estimate. As described in
@@ -1189,7 +1218,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <inline-formula><alternatives>
     <tex-math><![CDATA[p_{x_2=0}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>0</mml:mn></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>
-    and Survival probabilities <inline-formula><alternatives>
+    and survival probabilities <inline-formula><alternatives>
     <tex-math><![CDATA[S_{x_2=1}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>S</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>,
     <inline-formula><alternatives>
@@ -1230,12 +1259,16 @@ a Creative Commons Attribution 4.0 International License (CC BY
     <tex-math><![CDATA[j]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>j</mml:mi></mml:math></alternatives></inline-formula>:</p>
     <p><disp-formula><alternatives>
-    <tex-math><![CDATA[E_{i}[p_{x_{[I]}}|t_j] = {\frac 1 n} \sum_{i=1}^n {p_{x_{[I]_{ij}}}} ]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:msub></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mn>1</mml:mn><mml:mi>n</mml:mi></mml:mfrac><mml:munderover><mml:mo>∑</mml:mo><mml:mrow><mml:mi>i</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>n</mml:mi></mml:munderover><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:msub></mml:msub></mml:mrow></mml:math></alternatives></disp-formula>
+    <tex-math><![CDATA[
+    E_{i}[p_{x_{[I]}}|t_j] = {\frac 1 n} \sum_{i=1}^n {p_{x_{[I]_{ij}}}} \text{,}
+    ]]></tex-math>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:msub></mml:msub><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mn>1</mml:mn><mml:mi>n</mml:mi></mml:mfrac><mml:munderover><mml:mo>∑</mml:mo><mml:mrow><mml:mi>i</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>n</mml:mi></mml:munderover><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:msub></mml:msub><mml:mtext mathvariant="normal">,</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula>
     <disp-formula><alternatives>
-    <tex-math><![CDATA[E_{i}[S_{x_{[I]}}(t_j)] = {\frac 1 n} \sum_{i=1}^n {S_{x_{[I]_{i}}}(t_j)} ]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mn>1</mml:mn><mml:mi>n</mml:mi></mml:mfrac><mml:munderover><mml:mo>∑</mml:mo><mml:mrow><mml:mi>i</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>n</mml:mi></mml:munderover><mml:mrow><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mi>i</mml:mi></mml:msub></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mrow></mml:mrow></mml:math></alternatives></disp-formula></p>
-    <p>Where <inline-formula><alternatives>
+    <tex-math><![CDATA[
+    E_{i}[S_{x_{[I]}}(t_j)] = {\frac 1 n} \sum_{i=1}^n {S_{x_{[I]_{i}}}(t_j)} \text{,}
+    ]]></tex-math>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mn>1</mml:mn><mml:mi>n</mml:mi></mml:mfrac><mml:munderover><mml:mo>∑</mml:mo><mml:mrow><mml:mi>i</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>n</mml:mi></mml:munderover><mml:mrow><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mi>i</mml:mi></mml:msub></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow></mml:mrow><mml:mtext mathvariant="normal">,</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
+    <p>where <inline-formula><alternatives>
     <tex-math><![CDATA[E_{i}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub></mml:math></alternatives></inline-formula>
     is the expectation over <inline-formula><alternatives>
@@ -1265,8 +1298,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
         \end{matrix}
     ]]></tex-math>
     <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mtable><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>j</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>t</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>0</mml:mn></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>0</mml:mn></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mi>−</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.17</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.83</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.11</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.91</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mn>2</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>3</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.22</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.65</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.16</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.8</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"><mml:mn>3</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>5</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.18</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.54</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.12</mml:mn></mml:mtd><mml:mtd columnalign="center" style="text-align: center"><mml:mn>0.73</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="center" style="text-align: center"></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p>
-    <p>These expectations can be further used to make comparisons can be
-    made between the evaluation of various values of
+    <p>These expectations can be further used to make comparisons
+    between the evaluation of various values of
     <inline-formula><alternatives>
     <tex-math><![CDATA[x_{[I]}]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>
@@ -1274,7 +1307,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     derived from these predicted values include:</p>
     <list list-type="bullet">
       <list-item>
-        <p>Marginal difference is Survival probability at time
+        <p>Marginal difference is survival probability at time
         <inline-formula><alternatives>
         <tex-math><![CDATA[t]]></tex-math>
         <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>t</mml:mi></mml:math></alternatives></inline-formula>:</p>
@@ -1282,9 +1315,9 @@ a Creative Commons Attribution 4.0 International License (CC BY
     </list>
     <p><disp-formula><alternatives>
     <tex-math><![CDATA[
-    \text{Surv. Diff.}_{marg}(t_j) = E_{i}[S_{x_{[I]_2}}(t_j)] - E_{i}[S_{x_{[I]_1}}(t_j)]
+    \text{Surv. Diff.}_{marg}(t_j) = E_{i}[S_{x_{[I]_2}}(t_j)] - E_{i}[S_{x_{[I]_1}}(t_j)] \text{.}
     ]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mtext mathvariant="normal">Surv. Diff.</mml:mtext><mml:mrow><mml:mi>m</mml:mi><mml:mi>a</mml:mi><mml:mi>r</mml:mi><mml:mi>g</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>2</mml:mn></mml:msub></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mo>−</mml:mo><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>1</mml:mn></mml:msub></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow></mml:math></alternatives></disp-formula></p>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mtext mathvariant="normal">Surv. Diff.</mml:mtext><mml:mrow><mml:mi>m</mml:mi><mml:mi>a</mml:mi><mml:mi>r</mml:mi><mml:mi>g</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>2</mml:mn></mml:msub></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mo>−</mml:mo><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>S</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>1</mml:mn></mml:msub></mml:msub></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mtext mathvariant="normal">.</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
     <list list-type="bullet">
       <list-item>
         <p>Marginal Risk Ratio at time <inline-formula><alternatives>
@@ -1294,9 +1327,9 @@ a Creative Commons Attribution 4.0 International License (CC BY
     </list>
     <p><disp-formula><alternatives>
     <tex-math><![CDATA[
-    \text{RR}_{marg}(t_j) = \frac {E_{i}[p_{x_{[I]_2j}}]} {E_{i}[p_{x_{[I]_1j}}]}
+    \text{RR}_{marg}(t_j) = \frac {E_{i}[p_{x_{[I]_2j}}]} {E_{i}[p_{x_{[I]_1j}}]} \text{.}
     ]]></tex-math>
-    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mtext mathvariant="normal">RR</mml:mtext><mml:mrow><mml:mi>m</mml:mi><mml:mi>a</mml:mi><mml:mi>r</mml:mi><mml:mi>g</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>2</mml:mn></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>1</mml:mn></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow></mml:mfrac></mml:mrow></mml:math></alternatives></disp-formula></p>
+    <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mtext mathvariant="normal">RR</mml:mtext><mml:mrow><mml:mi>m</mml:mi><mml:mi>a</mml:mi><mml:mi>r</mml:mi><mml:mi>g</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>2</mml:mn></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi>i</mml:mi></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:msub><mml:mi>x</mml:mi><mml:mrow><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>1</mml:mn></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow></mml:mfrac><mml:mtext mathvariant="normal">.</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
     <list list-type="bullet">
       <list-item>
         <p>Marginal Hazard Ratio (expectation over
@@ -1308,16 +1341,16 @@ a Creative Commons Attribution 4.0 International License (CC BY
         <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>t</mml:mi></mml:math></alternatives></inline-formula>):
         <disp-formula><alternatives>
         <tex-math><![CDATA[
-        \text{HR}_{marg}(t_j) = \frac {E_{it}[p_{x_{[I]_2}j}]} {E_{it}[p_{x_{[I]_1}j}]}
+        \text{HR}_{marg}(t_j) = \frac {E_{it}[p_{x_{[I]_2}j}]} {E_{it}[p_{x_{[I]_1}j}]} \text{.}
         ]]></tex-math>
-        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mtext mathvariant="normal">HR</mml:mtext><mml:mrow><mml:mi>m</mml:mi><mml:mi>a</mml:mi><mml:mi>r</mml:mi><mml:mi>g</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>t</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>2</mml:mn></mml:msub></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>t</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>1</mml:mn></mml:msub></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow></mml:mfrac></mml:mrow></mml:math></alternatives></disp-formula></p>
+        <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mtext mathvariant="normal">HR</mml:mtext><mml:mrow><mml:mi>m</mml:mi><mml:mi>a</mml:mi><mml:mi>r</mml:mi><mml:mi>g</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">(</mml:mo><mml:msub><mml:mi>t</mml:mi><mml:mi>j</mml:mi></mml:msub><mml:mo stretchy="true" form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>t</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>2</mml:mn></mml:msub></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>t</mml:mi></mml:mrow></mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:msub><mml:mrow><mml:mo stretchy="true" form="prefix">[</mml:mo><mml:mi>I</mml:mi><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow><mml:mn>1</mml:mn></mml:msub></mml:msub><mml:mi>j</mml:mi></mml:mrow></mml:msub><mml:mo stretchy="true" form="postfix">]</mml:mo></mml:mrow></mml:mrow></mml:mfrac><mml:mtext mathvariant="normal">.</mml:mtext></mml:mrow></mml:math></alternatives></disp-formula></p>
       </list-item>
     </list>
     <p>Continuing the example, the marginal effect of
     <inline-formula><alternatives>
     <tex-math><![CDATA[x_2]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub></mml:math></alternatives></inline-formula>
-    as measured by difference in Survival probability when
+    as measured by difference in survival probability when
     <inline-formula><alternatives>
     <tex-math><![CDATA[x_2 = 1]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:math></alternatives></inline-formula>
@@ -1351,11 +1384,11 @@ a Creative Commons Attribution 4.0 International License (CC BY
     to <inline-formula><alternatives>
     <tex-math><![CDATA[1]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mn>1</mml:mn></mml:math></alternatives></inline-formula>
-    leads to an average change in the Survival probability of
+    leads to an average change in the survival probability of
     <inline-formula><alternatives>
     <tex-math><![CDATA[-0.19]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>−</mml:mi><mml:mn>0.19</mml:mn></mml:mrow></mml:math></alternatives></inline-formula>,
-    where Survival Probability is in the range
+    where survival probability is in the range
     <inline-formula><alternatives>
     <tex-math><![CDATA[0]]></tex-math>
     <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mn>0</mml:mn></mml:math></alternatives></inline-formula>-<inline-formula><alternatives>
@@ -1370,10 +1403,16 @@ a Creative Commons Attribution 4.0 International License (CC BY
 </sec>
 <sec id="demonstration">
   <title>Demonstration</title>
-  <p>The following is a brief demonstration on how to use
-  <monospace>BART-Survival</monospace>. The <italic>rossi</italic>
-  survival dataset from the lifelines library is used for this
-  example.</p>
+  <p>The following is a brief demonstration on how to use the
+  <monospace>BART-Survival</monospace> library. In the demonstration the
+  <italic>rossi</italic> survival dataset from the lifelines library is
+  used. The dataset contains one year of follow-up observation on 432
+  convicts who were released from Maryland state prisons in the 1970s.
+  The primary event measured in this dataset is observation of a “new
+  arrest” within that year and the associated “time to arrest” is given
+  in weeks
+  (<xref alt="Rossi &amp; Lenihan, 1980" rid="ref-rossi1980" ref-type="bibr">Rossi
+  &amp; Lenihan, 1980</xref>).</p>
   <code language="python">from lifelines.datasets import load_rossi
 from bart_survival import surv_bart as sb
 import numpy as np
@@ -1385,8 +1424,8 @@ names = rossi.columns.to_numpy()
 rossi = rossi.to_numpy()</code>
   <p>After loading the libraries and data, the first step is to generate
   the <bold>TAD</bold> and <bold>PAD</bold> datasets. In this step, the
-  time (originally in days) is downscaled by a factor of 7, setting time
-  to be measured in weeks.</p>
+  time (originally in weeks) is downscaled by a factor of 4, setting
+  time to be measured in months.</p>
   <code language="python">######################################
 # Transform data into 'augmented' dataset
 # Requires creation of the training dataset and a predictive dataset for inference
@@ -1395,7 +1434,7 @@ trn = sb.get_surv_pre_train(
     y_time=rossi[:,0],
     y_status=rossi[:,1],
     x = rossi[:,2:],
-    time_scale=7
+    time_scale=4
 )
 
 # PAD
@@ -1403,8 +1442,50 @@ post_test = sb.get_posterior_test(
     y_time=rossi[:,0],
     y_status=rossi[:,1],
     x = rossi[:,2:],
-    time_scale=7
+    time_scale=4
 )</code>
+  <p>Below the <monospace>trn</monospace> object is displayed. The
+  <monospace>trn</monospace> object generated in this step is a
+  dictionary of arrays containing the <bold>TAD</bold> components. The
+  <monospace>y</monospace> and <monospace>x</monospace> components are
+  the corresponding outcome and covariates of the <bold>TAD</bold>. The
+  <monospace>w</monospace> object is an array of weight values generated
+  by the <monospace>get_surv_pre_train</monospace> function. By default
+  all weights are set to <inline-formula><alternatives>
+  <tex-math><![CDATA[1]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mn>1</mml:mn></mml:math></alternatives></inline-formula>
+  and do not contribute to model training. For general use the weighting
+  functionality can be ignored. In more complex study designs,
+  observation level weights can be provided which allows weighted
+  contribution to the likelihood function during model training.
+  Weighting the likelihood function is currently experimental, but we
+  plan to evaluate this utility further in future work. Finally, the
+  <monospace>coord</monospace> object contains the observation
+  identifier for each row of the <bold>TAD</bold> making it easy to
+  identify the rows associated with a single or set of observations from
+  the <bold>TAD</bold>.</p>
+  <code language="python"># {'y': array([[0.],
+#         [0.],
+#         [0.],
+#         ...,
+#         [0.],
+#         [0.],
+#         [0.]]),
+#  'x': array([[ 1.,  0., 27., ...,  0.,  1.,  3.],
+#         [ 2.,  0., 27., ...,  0.,  1.,  3.],
+#         [ 3.,  0., 27., ...,  0.,  1.,  3.],
+#         ...,
+#         [11.,  1., 24., ...,  0.,  1.,  1.],
+#         [12.,  1., 24., ...,  0.,  1.,  1.],
+#         [13.,  1., 24., ...,  0.,  1.,  1.]]),
+#  'w': array([[1.],
+#         [1.],
+#         [1.],
+#         ...,
+#         [1.],
+#         [1.],
+#         [1.]]),
+#  'coord': array([  0,   0,   0, ..., 431, 431, 431])}</code>
   <p>The next step is to initialize the model, which involves setting
   several parameter values. The key considerations when initializing the
   models is number of trees and the split rules. The number of trees
@@ -1467,7 +1548,7 @@ post1 = BSM.sample_posterior_predictive(
     X_pred=post_test[&quot;post_x&quot;], 
     coords=post_test[&quot;coords&quot;] 
 )</code>
-  <p>Finally the Survival probability can derived from the
+  <p>Finally the survival probability can derived from the
   <inline-formula><alternatives>
   <tex-math><![CDATA[p_{ij}]]></tex-math>
   <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>p</mml:mi><mml:mrow><mml:mi>i</mml:mi><mml:mi>j</mml:mi></mml:mrow></mml:msub></mml:math></alternatives></inline-formula>
@@ -1475,7 +1556,7 @@ post1 = BSM.sample_posterior_predictive(
   <code language="python"># Convert to SV probability.
 sv_prob = sb.get_sv_prob(post1)
 print(sv_prob[&quot;sv&quot;].shape)
-# (1600, 432, 8)</code>
+# (1600, 432, 13)</code>
   <p>The sv_prob object above is a dictionary containing numpy arrays of
   both the <inline-formula><alternatives>
   <tex-math><![CDATA[p_{ij}]]></tex-math>
@@ -1487,8 +1568,8 @@ print(sv_prob[&quot;sv&quot;].shape)
   <inline-formula><alternatives>
   <tex-math><![CDATA[p]]></tex-math>
   <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>p</mml:mi></mml:math></alternatives></inline-formula>,<inline-formula><alternatives>
-  <tex-math><![CDATA[S]]></tex-math>
-  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>S</mml:mi></mml:math></alternatives></inline-formula>
+  <tex-math><![CDATA[s]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>s</mml:mi></mml:math></alternatives></inline-formula>
   arrays are three dimensional with the dimensions of the arrays being:
   - axis 0 = draws of the posterior predictive distribution: 1600 - axis
   1 = observations <inline-formula><alternatives>
@@ -1497,62 +1578,76 @@ print(sv_prob[&quot;sv&quot;].shape)
   432 - axis 2 = times <inline-formula><alternatives>
   <tex-math><![CDATA[j]]></tex-math>
   <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>j</mml:mi></mml:math></alternatives></inline-formula>:
-  8</p>
+  13</p>
   <p>These arrays can be easily reduced down to point estimates and
   credible intervals using basic numpy methods. For example to get the
   estimate of the mean over all observations, first get the mean over
   the observations (axis 1) followed by the mean over the posterior
-  draws (axis 0). The results being the estimated mean Survival over the
-  8 time intervals.</p>
+  draws (axis 0). The results being the estimated mean survival over the
+  13 time intervals.</p>
   <p>Similarly the 0.05-0.95 credible interval for the estimated mean
-  Survival can be returned as the quantile evaluations of the same
-  mean-over-axis-1 array. This yields a (2,8) array with the lower and
+  survival can be returned as the quantile evaluations of the same
+  mean-over-axis-1 array. This yields a (2,13) array with the lower and
   upper bounds (rows) of the credible interval defined for each time
   point (columns).</p>
   <code language="python"># get the mean value across observations for each time within each draw of the posterior predictive distribution
 ave_obs = sv_prob[&quot;sv&quot;].mean(axis=1)
 print(ave_obs.shape)
-# (1600, 8)
+# (1600, 13)
 
 # get the average across the posterior draws 
 ave_obs_draws = ave_obs.mean(0)
 print(ave_obs_draws)
-# [0.97259158 0.93862734 0.9015028  0.86572104 0.83166388 0.79712983 0.76321937 0.73634161]
+#[0.98282867 0.96457594 0.94578149 
+# 0.92613075 0.90503023 0.88429523 
+# 0.86382304 0.84376736 0.82281631 
+# 0.80169965 0.78080675 0.75948555 
+# 0.73816541]
 
 # get the .05 and .95 percentiles of the mean across posterior draws
 ci_obs_draws = np.quantile(ave_obs, [0.05, 0.95], axis=0)
 print(ci_obs_draws)
 # lower bound
-#[[0.96432971 0.92615903 0.88601098 0.84845099 0.81381525 0.77771897 0.7426666  0.71438202]
+# [0.97813492 0.95597036 0.93449701 
+# 0.91273325 0.88996273 0.86803963 
+# 0.84529644 0.82373944 0.8013158  
+# 0.77941446 0.75844137 0.73615453 
+# 0.71387   ]
 # upper bound
-# [0.98066217 0.94989412 0.91620586 0.8829086  0.84948681 0.81667259 0.78434529 0.75795991]]</code>
+# [0.9879464  0.97269846 0.95684153 
+# 0.93988969 0.91999613 0.90054844 
+# 0.8815908  0.86294746 0.84339772 
+# 0.82276706 0.80264632 0.78084766 
+# 0.76145384]</code>
   <p>Examples of generation of marginal effect estimates can be found in
   the example notebooks provided in the repository documentation.</p>
 </sec>
 <sec id="conclusion">
   <title>Conclusion</title>
   <p><monospace>BART-Survival</monospace> provides the computational
-  methods required for completing non-parametric discrete-time Survival
+  methods required for completing non-parametric discrete-time survival
   analysis. This approach can have several advantages over alternative
-  Survival methods. These advantages include capabilities to incorporate
+  survival methods. These advantages include capabilities to incorporate
   non-linear and interaction effects into the model, naturally ability
   to regularize the model (which reduces the risk of over-fitting) and
   of being robust to issues of multi-collinearity. The
   <monospace>BART-Survival</monospace> approach is especially useful
-  when the assumptions of alternative Survival methods are violated.</p>
+  when the assumptions of alternative survival methods are violated.</p>
   <p>Our <monospace>BART-Survival</monospace> algorithm has been tested
   in a rigorous simulation study, with additional applications to
   real-world data. While the manuscript for this work is currently under
   development, the results indicate similar performance as the the
-  R-based BART Survival method across settings of varied complexity.
+  R-based BART survival method across settings of varied complexity.
   Both methods demonstrate the previously describe advantages over other
   survival approaches (such as Cox Proportional Hazard Models) when the
   relationships within the data becomes more complex or assumptions of
-  the these other models are violated. An example comparing the R-based
-  method and our BART-Survival algorithm is provided
-  <ext-link ext-link-type="uri" xlink:href="https://github.com/CDCgov/BART-Survival/tree/main/examples/pbart_rbart_comparsion/lung.ipynb">here</ext-link>.</p>
+  the these other models are violated. A comparison of the R-based
+  method and our <monospace>BART-Survival</monospace> algorithm is
+  included in the
+  <ext-link ext-link-type="uri" xlink:href="https://github.com/CDCgov/BART-Survival/blob/main/examples/pbart_rbart_comparison/lung.ipynb">examples
+  folder of the github repository</ext-link>.</p>
   <p>Our library provides a convenient API for completing discrete-time
-  Survival analysis, along with the functionality to customize the
+  survival analysis, along with the functionality to customize the
   methodology as needed. The associated API documentation can be found
   <ext-link ext-link-type="uri" xlink:href="https://cdcgov.github.io/BART-Survival/build/html/index.html">here</ext-link>,
   along with the associated github repository
@@ -1620,6 +1715,32 @@ print(ci_obs_draws)
       <pub-id pub-id-type="doi">10.1002/sim.6893</pub-id>
       <fpage>2741</fpage>
       <lpage>2753</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-rossi1980">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Rossi</surname><given-names>R. A. Berk</given-names><suffix>P. H.</suffix></name>
+        <name><surname>Lenihan</surname><given-names>K. J.</given-names></name>
+      </person-group>
+      <article-title>Money, work, and crime: Some experimental results</article-title>
+      <source>New York: Academic Press</source>
+      <year iso-8601-date="1980">1980</year>
+    </element-citation>
+  </ref>
+  <ref id="ref-stel2011">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Stel Vianda S.</surname><given-names>Tripepi Giovanni</given-names><suffix>Dekker Friedo W.</suffix></name>
+      </person-group>
+      <article-title>Survival analysis i: The kaplan-meier method</article-title>
+      <source>Nephron Clin Pract</source>
+      <year iso-8601-date="2011-06">2011</year><month>06</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2024-10-31">2024</year><month>10</month><day>31</day></date-in-citation>
+      <volume>119</volume>
+      <issue>1</issue>
+      <issn>1660-2110</issn>
+      <pub-id pub-id-type="doi">10.1159/000324758</pub-id>
     </element-citation>
   </ref>
   <ref id="ref-abril-pla2023">

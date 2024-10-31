@@ -5,5 +5,8 @@
         "ISSO",
         "cybersecurity"
     ],
-    "python.analysis.typeCheckingMode": "off"
+    "python.analysis.typeCheckingMode": "off",
+    "cSpell.enableFiletypes": [
+        "!python"
+    ]
 }
