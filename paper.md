@@ -243,7 +243,7 @@ $$
 \end{matrix}
 $$
 
-Notably the **TAD** and **PAD** lengths can differ. **PAD** length is simple to calculate. If $n$ is the number of observations in the generic dataset and $k$ is the number of the unique times observed in the generic dataset, then the length of the **PAD** is simply $n * k$. In the example data above it would be $(8*6)=36$.
+Notably the **TAD** and **PAD** lengths can differ. **PAD** length is simple to calculate. If $n$ is the number of observations in the generic dataset and $k$ is the number of the unique times observed in the generic dataset, then the length of the **PAD** is simply $n * k$. In the example data above it would be $(8*6)=48$.
 
 The **TAD** length can be calculated using each observation's $m_i$, which again is defined as being the index that resolves $t_{m_i}=$ *event time*$_i$. The **TAD** length can be calculated as:
 
