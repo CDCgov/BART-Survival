@@ -342,9 +342,12 @@ where $q$ is the index of the time for the desired estimate. As described in the
 
 `BART-Survival` provides capabilities to evaluate covariate effects through use of partial dependence functions which yield marginal effect estimates. The partial dependence function method involves generating predictions of $p$ for the observations in a **partial dependence augmented dataset** (**PDAD**). Using variations of the **PDAD** yields different sets of predictions $p$. These sets can then be contrasted to yield marginal effect estimates, including marginal Hazard Ratios which have similar interpretation as the Cox Proportional Hazard Model's conditional Hazard Ratios.
 
-**PDAD**s can be created through further augmentation of the previously described **PAD**. As a reminder, the **PAD** contains the generated time covariate $t$ and 
-$k$ replicates of each $x_i$ from the generic dataset, where $k$ is the length of the uniquely observed *event times*. Starting with the **PAD**, the **PDAD** is generated through selection of a specific variable $x_{[I]}$ from the covariates $x$, and then deterministically setting $x_{[I]}$ to a specific value for all observations. The unselected covariates $x_{[0]}$ that are not augmented and are consistent with the values in the generic dataset. An example of creating a **PDAD**  from the **PAD** is shown below. In this example a baseline **PAD** is used to create two **PDAD** datasets. The selected covariate $x_2$ is deterministically set to the values $0$ or $1$ for all observations in each dataset. 
- 
+**PDAD**s can be created through further augmentation of the previously described **PAD**. As a reminder, the **PAD** contains the generated time covariate $t$ and $k$ replicates of each $x_i$ from the generic dataset, where $k$ is the length of the uniquely observed *event times*. Importantly $x_{i}$ can be defined generically as the set of covariates $\{x_{1_i}, x_{2_i}, .., x_{m_i}\}$, where $m$ is the index of the last included covariate.
+
+Then, starting with the **PAD**, the **PDAD** is generated through selection of a specific covariate $x_{[I]}$, from the set of covariates $\{x_{1}, x_{2}, ..., x_{m}\}$ and setting that covariate to a deterministic value for all observation $i$ and evaluated times $j$. The bracketed notation ${[I]}$ is used to define the index of the covariate selected and convey that the selected covariate is set to a deterministic value. Expanding the notation, $x_{[I] = v}$ indicates that covariate of index $I$ is selected and deterministically set to value $v$.
+
+In the following example the second covariate from a set of covariates $\{x_{1}, x_{2}, x_{3}\}$ is of interest for evaluating marginal effects. This covariate is binary and takes the values ${0,1}$. Evaluation of this covariate can be completed by creating **PDAD**s for possible values of the selected covariate. In each **PDAD** all of the observations and times are set to a deterministic values selected from the range of the covariate. The two generated **PDAD**s can be defined by the covariate index and set values: $x_{[2] = 0}$ and $x_{[2]=1}$.
+
 
 
 $$
@@ -365,7 +368,7 @@ i & j & t & x_1 & x_2 & x_3 \\
 $$
 
 $$
-    \text{PDAD}_{x_2=1} \space\space\space\space
+    \text{PDAD}_{x_{[2]=1}} \space\space\space\space
     \begin{matrix}
     i & j & t & x_1 & \bold{x_2} & x_3 \\ 
     -&-&-&-&-&-&\\
@@ -381,7 +384,7 @@ $$
     \end{matrix} 
 $$
 $$
-    \text{PDAD}_{x_2=0} \space\space\space\space
+    \text{PDAD}_{x_{[2]=0}} \space\space\space\space
     \begin{matrix}
     i & j & t & x_1 & \bold{x_2} & x_3 \\ 
     -&-&-&-&-&-&\\
@@ -397,11 +400,11 @@ $$
     \end{matrix} 
 $$
 
-From the two **PDAD**s the predicted probabilities $p_{x_2=1}$, $p_{x_2=0}$ and survival probabilities $S_{x_2=1}$, $S_{x_2=0}$ can be generated:
+From the two **PDAD**s the predicted probabilities $p_{x_{[2]=1}}$, $p_{x_{[2]=0}}$ and survival probabilities $S_{x_{[2]=1}}$, $S_{x_{[2]=0}}$ can be generated:
 
 $$
     \begin{matrix}
-    i & j & p_{x_2=1} & S_{x_2=1} & p_{x_2=0} & S_{x_2=0}\\
+    i & j & p_{x_{[2]=1}} & S_{x_{[2]=1}} & p_{x_{[2]=0}} & S_{x_{[2]=0}}\\
     -&-&-&-&-&-\\
     1 & 1 & .20 & .80 &.10 & .90\\
     1 & 2 & .25 & .60 &.15 & .77\\
@@ -415,13 +418,13 @@ $$
     \end{matrix}
 $$
 
-The marginal expectations of $p_{x_{[i]}}$ and $S_{x_{[i]}}$ at a specific time can be further derived by taking the average of the estimates over observations $i$ for the specified time $t$ indexed by $j$: 
+The marginal expectations of $p_{x_{[I]}}$ and $S_{x_{[I]}}$ at a specific time can be further derived by taking the average of the estimates over observations $i$ for the specified time $t$ indexed by $j$: 
 
 $$
-E_{i}[p_{x_{[I]}}|t_j] = {\frac 1 n} \sum_{i=1}^n {p_{x_{[I]_{ij}}}} \text{,}
+E_{i}[p_{x_{[I]}}|t_j] = {\frac 1 n} \sum_{i=1}^n {p_{ij,x_{[I]}}} \text{,}
 $$
 $$
-E_{i}[S_{x_{[I]}}(t_j)] = {\frac 1 n} \sum_{i=1}^n {S_{x_{[I]_{i}}}(t_j)} \text{,}
+E_{i}[S_{x_{[I]}}(t_j)] = {\frac 1 n} \sum_{i=1}^n {S_{i,x_{[I]}}(t_j)} \text{,}
 $$
 
 where $E_{i}$ is the expectation over $i$,...,$n$ observations. From the above example this yields the expectations for time indices $j=$ $1$,$2$,$3$.
@@ -442,21 +445,21 @@ These expectations can be further used to make comparisons between the evaluatio
 
 
 $$
-\text{Surv. Diff.}_{marg}(t_j) = E_{i}[S_{x_{[I]_2}}(t_j)] - E_{i}[S_{x_{[I]_1}}(t_j)] \text{.}
+\text{Surv. Diff.}_{marg}(t_j) = E_{i}[S_{x_{[I] = v_2}}(t_j)] - E_{i}[S_{x_{[I] = v_1}}(t_j)] \text{.}
 $$
 
 - Marginal Risk Ratio at time $t$:
 
 $$
-\text{RR}_{marg}(t_j) = \frac {E_{i}[p_{x_{[I]_2j}}]} {E_{i}[p_{x_{[I]_1j}}]} \text{.}
+\text{RR}_{marg}(t_j) = \frac {E_{i}[p_{j,x_{[I] = v_{2}}}]} {E_{i}[p_{j,x_{[I] = v_1}}]} \text{.}
 $$
 
-- Marginal Hazard Ratio (expectation over $i$ and times $t$):
+- Marginal Hazard Ratio (expectation over $i$ and times up to $t$):
 $$
-\text{HR}_{marg}(t_j) = \frac {E_{it}[p_{x_{[I]_2}j}]} {E_{it}[p_{x_{[I]_1}j}]} \text{.}
+\text{HR}_{marg}(t_{j}) = \frac {E_{ij}[p_{x_{[I]=v_2}}]} {E_{ij}[p_{x_{[I] = v_1}}]} \text{.}
 $$
 
-Continuing the example, the marginal effect of $x_2$ as measured by difference in survival probability when $x_2 = 1$ and $x_2 =0$ at the times $2,3,5$ can be examined below: 
+Continuing the example, the marginal effect of $x_2$ as measured by difference in survival probability when $x_{[2]} = 1$ and $x_{[2]} =0$ at the times $2,3,5$ can be examined below: 
 $$
     \begin{matrix}
     j & t & \text{Surv.Diff.}\\
