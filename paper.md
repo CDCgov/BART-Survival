@@ -12,9 +12,11 @@ authors:
     orcid: 0009-0001-6265-913X
     affiliation: "1, 2" 
   - name: Julia Raykin
+    orcid: 0009-0006-1840-6991
     corresponding: true 
     affiliation: 1
   - name: Ilia Rochlin
+    orcid: 0000-0001-7680-6965
     corresponding: true 
     affiliation: 1
 affiliations:
