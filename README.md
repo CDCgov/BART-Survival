@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/820618468.svg)](https://doi.org/10.5281/zenodo.14104922)
+
 ## Overview
 
 ``BART-Survival`` is a Python package that supports discrete-time Survival analyses using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). ``BART-Survival`` combines the performance of the BART algorithm from the [PyMC-BART](https://www.pymc.io/projects/bart/en/latest/) library with the proper structural formatting required to complete the end-to-end Survival analysis. 
