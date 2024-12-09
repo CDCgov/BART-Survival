@@ -32,22 +32,22 @@ bibliography: paper.bib
 
 # Summary
 
-`BART-Survival` is a Python package that allows time-to-event (survival) analyses in discrete-time using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). `BART-Survival` combines the performance of the BART algorithm with the complementary data and model structural formatting required to complete the survival analyses. The library contains a convenient application programming interface (API) that allows a simple approach when using the library for survival analyses, while maintaining capabilities for added complexity when desired. The package is intended for analysts exploring use of flexible non-parametric alternatives to traditional (semi-)parametric survival analyses. 
+`BART-Survival` is a Python package that allows time-to-event (survival) analyses in discrete-time using the non-parametric machine learning algorithm, Bayesian Additive Regression Trees (BART). `BART-Survival` combines the performance of the BART algorithm with the complementary data and model formatting required to complete the survival analyses. The library contains a convenient application programming interface (API) that allows a simple approach when using the library for survival analyses, while maintaining capabilities for added complexity when desired. The package is intended for analysts exploring use of flexible non-parametric alternatives to traditional (semi-)parametric survival analyses. 
 
 # Statement of need
 
-Survival analyses are a cornerstone of public health and clinical research in such diverse fields as cancer, cardiovascular disease, and infectious diseases [@altman1998; @bradburn2003]. Traditional parametric and semi-parametric statistical methods, such as the Cox proportional hazards model, are commonly employed for survival analyses [@cox1972]. However, these methods have several limitations, particularly when applied to complex data. One major issue is the need for restrictive assumptions, such as proportional hazards and predefined functional forms, which may not hold true in complex, real-world healthcare data [@ishwaran2008; @harrell2015]. Additionally, these methods often struggle with high-dimensional datasets, leading to problems with overfitting, multicollinearity, and dealing with complex interactions [@ishwaran2008; @joffe2013].
+Survival analyses are a cornerstone of public health and clinical research in such diverse fields as cancer, cardiovascular disease, and infectious diseases [@altman1998; @bradburn2003]. Traditional parametric and semi-parametric statistical methods, such as the Cox proportional hazards model, are commonly employed for survival analyses [@cox1972]. However, these methods have several limitations, particularly when applied to complex data. One major issue is the need for restrictive assumptions, such as proportional hazards and predefined functional forms, which may not hold true in complex, real-world healthcare data [@ishwaran2008; @harrell2015]. Additionally, these methods often struggle with high-dimensional datasets, leading to problems with over-fitting, multi-collinearity, and dealing with complex interactions [@ishwaran2008; @joffe2013].
 
-More recently, non-parametric machine learning approaches have been introduced to address these limitations by reducing the need for restrictive assumptions and providing increased capabilities for more accurately modeling underlying distributions and complex interactions [@ishwaran2008; @harrell2015]. BART is one such machine learning method that has demonstrated utility in the survival setting through its performance in identifying underlying statistical distributions [@chipman2010; @sparapani2021]. BART offers flexibility in modeling complex relationships and interactions within the data without requiring the specification of a particular functional form [@sparapani2016]. 
+More recently, non-parametric machine learning approaches have been introduced to address the limitations of the traditional methods [@ishwaran2008; @harrell2015]. BART is a one such approach that has demonstrated exceptional performance across a variety of analytic settings, typically outperforming the traditional methods in terms of predictive accuracy. BART's performance is linked to it ability to flexibly model complex non-linear and variable interactions within the data, while being inherently regularized to reduce issues of over-fitting. The BART method is fully non-parametric and can adaptively model data complexities without prior knowledge or specification of a particular functional form. Finally, the method is generally accepted as being a user-friendly machine learning approach, as it typically requires minimal hyperparameter tuning and the outcomes can be easier to interpret than those produced by other similar methods [@chipman2010; @sparapani2016;@sparapani2021]. 
 
 Currently, the only BART survival algorithm readily available exists as part of the `BART` R package, which contains a library of various BART-based approaches in addition to a BART survival analysis application [@sparapani2016; @sparapani2021]. The `BART-Survival` package described here combines the survival analysis approach outlined in the `BART` R package with the foundational Python-based probabilistic programming language library, `PyMC` [@abril-pla2023], and the accompanying BART algorithm from the `PyMC-BART` library [@quiroga2023].
 Our aim in developing `BART-Survival` is to provide accessibility to the BART survival algorithm within the Python programming language. This contribution is beneficial for analysts when Python is the preferred programming language, the analytic workflow is Python-based, or when the R language is unavailable for analyses. 
 
 The need for a complete `BART-Survival` python package is given by the simple fact that the BART survival algorithm is non-trivial to implement. Both the required data transformations and the internal model definition requires precise implementations to ensure generation of accurate survival models. Our `BART-Survival` library provides accessibility to these precise methods while removing the technical barriers that would limit user adoption of the BART survival approach.
 
-More specifically, the `BART-Survival` library abstracts away the complexities of generating the proper training and inference datasets, which are conceptually complex and prone to  being specified incorrectly if implemented from scratch. Similarly, the `BART-Survival` library provides a pre-specified internal Bayesian model using the `PyMC` probabilistic programming language. This pre-specified model is primarily accessed through the `BART-Survival` API removing the requirement for users to have more than a cursory knowledge of the `PyMC` or `PyMC-BART` libraries. Since the `BART-Survival` package is intended for students and professional in the public health and clinical fields, it is expected users of the `BART-Survival` library will not have extensive programming expertise, adding to the need for a full contained and accessible approach.
+More specifically, the `BART-Survival` library abstracts away the complexities of generating the proper training and inference datasets, which are conceptually complex and prone to  being specified incorrectly if implemented from scratch. Similarly, the `BART-Survival` library provides a pre-specified internal Bayesian model using the `PyMC` probabilistic programming language. This pre-specified model is primarily accessed through the `BART-Survival` API removing the requirement for users to have more than a cursory knowledge of the `PyMC` or `PyMC-BART` libraries. Since the `BART-Survival` package is intended for students and professional in the public health and clinical fields, it is expected that users of the `BART-Survival` library will not have extensive programming expertise, adding to the need for a fully self-contained and accessible approach.
 
-In summary the `BART-Survival` package provides a simple and accessible approach to implementing the BART survival algorithm. The provided approach can be beneficial for users who are looking for non-parametric alternatives to traditional (semi-)parametric survival analysis. The BART survival algorithm can be especially useful in large, complex healthcare data, where machine learning methods can demonstrate improved performance over the traditional methods. 
+In summary, the `BART-Survival` package provides a simple and accessible approach to implementing the BART survival algorithm. The provided approach can be beneficial for users who are looking for non-parametric alternatives to traditional (semi-)parametric survival analysis. The BART survival algorithm can be especially useful in large, complex healthcare data, where machine learning methods can demonstrate improved performance over the traditional methods. 
 
 # Methods
 
@@ -56,10 +56,10 @@ The following sections provides details on the methods employed by the `BART-Sur
 ## Background
 The `BART-Survival` package provides a discrete-time survival method which aims to model survival as a function of a series of probabilities that indicate the probability of event occurrence at each discrete time. For clarity, the probability of event occurrence at each discrete time will be referred to as the risk probability.
 
-In combination with a structural configuration of the data, the discrete-time algorithm allows for flexible modeling of the risk probabilities as a non-parametric function of  time and observed covariates. The series of probability risks can then be used to derive the survival probabilities, along with other estimates of interest.
+In combination with a structural configuration of the data, the discrete-time algorithm allows for flexible modeling of the risk probabilities as a non-parametric function of time and observed covariates. The series of probability risks can then be used to derive the survival probabilities, along with other estimates of interest.
 
 
-The foundation of the method is simple and is based off the well-defined Kaplan-Meier Product-Limit estimator. While a full review of the Kaplan-Meier method can be found elsewhere [@stel2011], the following example demonstrates the fundamental concepts of discrete-time survival analysis that motivates its application within the `BART-Survial` method.
+The foundation of the method is simple and is based off the well-defined Kaplan-Meier Product-Limit estimator. While a full review of the Kaplan-Meier method can be found elsewhere [@stel2011], the following example demonstrates the fundamental concepts of discrete-time survival analysis that motivates its application within the `BART-Survival` method.
 
 1. Starting with a simple event-time dataset, create a sequence of time intervals that represent the unique discrete-time intervals observed in the data. Each interval is represented as a $t_j$, where $j = {1,...,k}$ and $k$ is the length of the set of unique observed times.
 
@@ -101,7 +101,7 @@ The foundation of the method is simple and is based off the well-defined Kaplan-
     - the number of observation censored 
     - the total number of observations eligible to have an event  (at risk) at the start of the interval
 
-    Continuing the above example the corresponding frequencies for each interval are:
+    Continuing the above example, the corresponding frequencies for each interval are:
 
     $$
     \begin{matrix} 
@@ -205,7 +205,7 @@ $$
     7 & 1 & 12 \\
 \end{matrix}
 $$
-Similarily the transformation for observation $6$ would be represented as:
+Similarly, the transformation for observation $6$ would be represented as:
 $$
 \begin{matrix} 
 \text{observation} & \text{status} &\text{time} \\
@@ -217,11 +217,11 @@ $$
 \end{matrix}
 $$
 
-It is important to reiterate that for each observation $i$, the new set of rows created only include the time points $t_j \le t_{m_i}$. For observation $\bold{7}$ the $t_{m_i} = 12$ and the corresponding times in the **TAD** are $4,6,7,8,12$. For observation $\bold{6}$ the $t_{m_i} = 8$ and the corresponding times in the **TAD** are $4,6,7,8$. 
+It is important to reiterate that for each observation $i$, the new set of rows created only include the time points $t_j \le t_{m_i}$. For observation $\bold{7}$, the $t_{m_i} = 12$ and the corresponding times in the **TAD** are $4,6,7,8,12$. For observation $\bold{6}$, the $t_{m_i} = 8$ and the corresponding times in the **TAD** are $4,6,7,8$. 
 
 The utility of the **TAD** is that it unlinks *event time* from the *event status*. In this setup, the constructed *status* variable (which is a simple binary variable taking values $1$ or $0$) represents the outcome and *time* is a covariate. Then treating each row of the **TAD** as an independent observation, the outcome can be modeled as a binary regression of *status* over *time* and any additional covariates $x$. The trained regression model from this dataset can be used to yield probability predictions for each time $t_j$ for $j$ in $1,...,k$. These probability predictions hold the interpretation as being the probability risk of event occurrence at each time conditional on the event not having already occurred at a previous time. The predictions for each observation $i$ and time $t_j$ can be used to yield the various analytic targets, such as survival probabilities. 
 
-To generate the predictions of probability risks over the observed times the **PAD** dataset is used. The **PAD** transformation is similar to the **TAD**, but is simpler in that for each observation a set of size $k$ tuples is created. Each tuple in the set contains the time $t_j$ for $j=1,...,k$ and any additional covariates $x$.
+To generate the predictions of probability risks over the observed times, the **PAD** dataset is used. The **PAD** transformation is similar to the **TAD**, but is simpler in that for each observation a set of size $k$ tuples is created. Each tuple in the set contains the time $t_j$ for $j=1,...,k$ and any additional covariates $x$.
 
 Continuing the examples above, there are $k=6$ the unique times. For $j=1,...,k$ the resulting distinct times are $t_j = 4,6,7,8,12,14$ and the **PAD**s for observations $6$, and $7$ would be:
 
@@ -251,7 +251,7 @@ The **TAD** length can be calculated using each observation's $m_i$, which again
 
 $$ \bold{TAD}_{\text{length}} = \sum_{i=1}^{n}{m_i} \text{.}$$
 
-This can be demonstrated with the example dataset where the **TAD** length can be found as the sum of the $m_i$ column which resolves to a **TAD** length of $27$:
+This can be demonstrated with the example dataset, where the **TAD** length can be found as the sum of the $m_i$ column which resolves to a **TAD** length of $27$:
 $$
     \begin{matrix}
     \text{observation} & \text{event time}_i & m_i\\
@@ -292,13 +292,13 @@ $$
 
 Downscaling the *event time* values causes loss of granularity in the set of discrete times analyzed. As shown in the example above, after downscaling (and then rescaling) the analytic targets can only be derived for the times $4,8,12$ and $16$, which is reduced from the original set of times, $4,6,7,8,12,14$. While the analytic targets cannot be returned for the times $6,7,14$, the training information contributed by the observations with these *event times* is maintained through subsequent contribution at the downscaled times. Since there is no loss of event information, the probability of event at the downscaled times $4,8,12,16$ will be equal to the probability of event from a non-downscaled dataset at the select time $4,8,12,16$.  
 
-Downscaling can be safely applied to datasets without loss of precision of estimates at the downscaled times. The only consideration required when using a downscaling procedure is to ensure that the downscaled times granularity fulfills the needs of the analysis. For example, in a multi-year health-outcomes study, downscaling from days to months could significantly reduce computational burden without a meaningful loss of information in the outcome. However, if that same study reduced time from days to years, this could lead to loss of meaningful information in the outcome. The considerations for downscaling need to be made on a study-to-study basis and no general recommendation on downscaling factor can be provided.
+Downscaling can be safely applied to datasets without loss of precision of estimates at the downscaled times. The only consideration required when using a downscaling procedure is to ensure that the downscaled times granularity fulfills the needs of the analysis. For example, in a multi-year health-outcomes study, downscaling from days to months could significantly reduce computational burden without a meaningful loss of information in the outcome. However, if that same study reduced time from days to years, this could lead to loss of meaningful information in the outcome. The considerations for downscaling need to be made on a study-to-study basis and no general recommendation on selecting a downscaling factor can be provided.
 
 ## Model
 
 The `BART-Survival` algorithm is two-step algorithm. First, the **TAD** is used to train a non-parametric regression model of *status* on *time* and covariates. Then the **PAD** is used to yield predicted probabilities at each discrete time. These probability of event predictions can be used generate all additional estimates useful for statistical inference. 
 
-To motivate the use of the **TAD** in training the regression model an example **TAD** is displayed below. Here *status* can be represented as the outcome vector of $y_{ij}$ values and *time* is represented by the $t_{ij}$ values. Additional covariates are represented by a vector of $x_{ij}$ values. The subscript $i$ refers to the $i^{th}$ observation of the generic dataset and the subscript $j$ refers to the $j^{th}$ index of the unique set of discrete times previously defined as $t$. In the **TAD** and **PAD**, the $i$, $j$ indices can be thought of as multi-indices over the rows. 
+To motivate the use of the **TAD** in training the regression model, an example **TAD** is displayed below. Here *status* can be represented as the outcome vector of $y_{ij}$ values and *time* is represented by the $t_{ij}$ values. Additional covariates are represented by a vector of $x_{ij}$ values. The subscript $i$ refers to the $i^{th}$ observation of the generic dataset and the subscript $j$ refers to the $j^{th}$ index of the unique set of discrete times previously defined as $t$. In the **TAD** and **PAD**, the $i$, $j$ indices can be thought of as multi-indices over the rows. 
 
 $$
     \begin{matrix}
@@ -542,7 +542,7 @@ Below the `trn` object is displayed. The `trn` object generated in this step is 
 
 
 
-The next step is to initialize the model, which involves setting several parameter values. The key considerations when initializing the models is number of trees and the split rules. The number of trees controls how many regression trees will be used. Typically 50 trees is a good default, but it can be adjusted to assist in model performance. Split rules is a specific `PyMC-BART` parameter and is used to designate the how the regression trees are constructed. The one requirement of the split rules is that the time covariate has to be set as a `pmb.ContinuousSplitRule()`. Otherwise, generally continuous variables can assigned `pmb.ContinuousSplitRule()` and categorical variables assigned `pmb.OneHotSplitRule()`. It is is recommended to review the `PyMC-BART` literature for more information regarding parameterization of the models.
+The next step is to initialize the model, which involves setting several parameter values. The key considerations when initializing the models is number of trees and the split rules. The number of trees controls how many regression trees will be used. Typically 50 trees is a good default, but it can be adjusted to assist in model performance. Split rules is a specific `PyMC-BART` parameter and is used to designate the how the regression trees are constructed. The one requirement of the split rules is that the time covariate has to be set as a `pmb.ContinuousSplitRule()`. Otherwise, continuous variables can assigned `pmb.ContinuousSplitRule()` and categorical variables assigned `pmb.OneHotSplitRule()`. It is is recommended to review the `PyMC-BART` literature for more information regarding parameterization of the models.
 
 ```python
 ######################################
@@ -598,7 +598,7 @@ Finally the survival probability can derived from the $p_{ij}$ estimates.
 ```python
 # Convert to SV probability.
 sv_prob = sb.get_sv_prob(post1)
-print(sv_prob["sv"].shape)
+print(sv_prob["sv"].shape)      
 # (1600, 432, 13)
 ```
 The sv_prob object above is a dictionary containing numpy arrays of both the $p_{ij}$ and $s_{ij}$ estimates, labeled "prob" and "sv" respectively. The $p$,$s$ arrays are three dimensional with the dimensions of the arrays being:
