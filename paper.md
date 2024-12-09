@@ -298,7 +298,7 @@ Downscaling can be safely applied to datasets without loss of precision of estim
 
 The `BART-Survival` algorithm is two-step algorithm. First, the **TAD** is used to train a non-parametric regression model of *status* on *time* and covariates. Then the **PAD** is used to yield predicted probabilities at each discrete time. These probability of event predictions can be used generate all additional estimates useful for statistical inference. 
 
-To motivate the use of the **TAD** in training the regression model, an example **TAD** is displayed below. Here *status* can be represented as the outcome vector of $y_{ij}$ values and *time* is represented by the $t_{ij}$ values. Additional covariates are represented by a vector of $x_{ij}$ values. The subscript $i$ refers to the $i^{th}$ observation of the generic dataset and the subscript $j$ refers to the $j^{th}$ index of the unique set of discrete times previously defined as $t$. In the **TAD** and **PAD**, the $i$, $j$ indices can be thought of as multi-indices over the rows. 
+To motivate the use of the **TAD** in training the regression model, an example **TAD** is displayed below. Here, *status* can be represented as the outcome vector of $y_{ij}$ values and *time* is represented by the $t_{ij}$ values. Additional covariates are represented by a vector of $x_{ij}$ values. The subscript $i$ refers to the $i^{th}$ observation of the generic dataset and the subscript $j$ refers to the $j^{th}$ index of the unique set of discrete times previously defined as $t$. In the **TAD** and **PAD**, the $i$, $j$ indices can be thought of as multi-indices over the rows. 
 
 $$
     \begin{matrix}
@@ -324,11 +324,11 @@ $$
 \end{aligned}
 $$
 
-where $\Phi$ is the normal cumulative distribution function and $\text{BART}$ is the ensemble of regression trees which yield the $\mu_{ij}$ value for a given $t_{ij}$, $x_{ij}$ combination.
+where $\Phi$ is the normal cumulative distribution function and $\text{BART}$ is the ensemble of regression trees that yield the $\mu_{ij}$ value for a given $t_{ij}$, $x_{ij}$ combination.
 
-Regarding the $\text{BART}$ algorithm, in brief $\text{BART}$ is a Bayesian approach to the ensemble regression trees class of non-parametric models. $\text{BART}$ uses a combination of Bayesian priors placed on the tree generating components and a Markov Chain Monte Carlo sampling algorithm to iteratively generate tree ensembles which are collected as samples of the posterior distribution. The samples of the posterior distribution are subsequently used to generate distinct posterior predictive distributions for a given set of observations.
+Regarding the $\text{BART}$ algorithm, in brief $\text{BART}$ is a Bayesian approach to the ensemble regression trees class of non-parametric models. $\text{BART}$ uses a combination of Bayesian priors placed on the tree generating components and a Markov Chain Monte Carlo sampling algorithm to iteratively generate tree ensembles. These tree ensemble are collected as samples of the posterior distribution. The samples of the posterior distribution are subsequently used to generate distinct posterior predictive distributions for a given set of observations.
 
-This implies that for each $t_{ij}$, $x_{ij}$ combination, the algorithm first returns a distribution of $p_{ij}$ values, denoted as $p_{ij_{dist}}$. Each value in the $p_{ij_{dist}}$ is a prediction mapped from a single tree ensemble of the posterior distribution. Point estimates and uncertainty intervals can be easily obtained from the $p_{ij_{dist}}$ as simple estimates from that distribution. For example the mean can be derived as the empirical average of $p_{ij_{dist}}$. Similarly, the even-tailed $95\%$ credible interval can be derived as the $5^{th}$ and $95^{th}$ percentiles of the $p_{ij_{dist}}$. Of note any reference to $p_{ij}$ used in this article is referring to the mean point estimate of the $p_{ij_{dist}}$.
+This implies that for each $t_{ij}$, $x_{ij}$ combination, the algorithm first returns a distribution of $p_{ij}$ values, denoted as $p_{ij_{dist}}$. Each value in the $p_{ij_{dist}}$ is a prediction mapped from a single tree ensemble of the posterior distribution. Point estimates and uncertainty intervals can be easily obtained from the $p_{ij_{dist}}$ as simple estimates from that distribution. For example the mean can be derived as the empirical average of $p_{ij_{dist}}$. Similarly, the even-tailed $95\%$ credible interval can be derived as the $5^{th}$ and $95^{th}$ percentiles of the $p_{ij_{dist}}$. Of note, any reference to $p_{ij}$ used in this article is referring to the mean point estimate of the $p_{ij_{dist}}$.
  
 Further details regarding the $\text{BART}$ implementation used in the `BART-Survival` algorithm can be found in `PyMC-BART` repository and the accompanying publication [@quiroga2023].
 
@@ -402,7 +402,7 @@ $$
     \end{matrix} 
 $$
 
-From the two **PDAD**s the predicted probabilities $p_{x_{[2]=1}}$, $p_{x_{[2]=0}}$ and survival probabilities $S_{x_{[2]=1}}$, $S_{x_{[2]=0}}$ can be generated:
+From the two **PDAD**s the predicted probabilities, $p_{x_{[2]=1}}$, $p_{x_{[2]=0}}$ and survival probabilities $S_{x_{[2]=1}}$, $S_{x_{[2]=0}}$, can be generated:
 
 $$
     \begin{matrix}
@@ -429,7 +429,7 @@ $$
 E_{i}[S_{x_{[I]}}(t_j)] = {\frac 1 n} \sum_{i=1}^n {S_{i,x_{[I]}}(t_j)} \text{,}
 $$
 
-where $E_{i}$ is the expectation over $i$,...,$n$ observations. From the above example this yields the expectations for time indices $j=$ $1$,$2$,$3$.
+where $E_{i}$ is the expectation over $i$,...,$n$ observations. From the above example, this yields the expectations for time indices $j=$ $1$,$2$,$3$.
 
 $$
     \begin{matrix}
@@ -513,7 +513,7 @@ post_test = sb.get_posterior_test(
 )
 ```
 
-Below the `trn` object is displayed. The `trn` object generated in this step is a dictionary of arrays containing the **TAD** components. The `y` and `x` components are the corresponding outcome and covariates of the **TAD**. The `w` object is an array of weight values generated by the `get_surv_pre_train` function. By default all weights are set to $1$ and do not contribute to model training. For general use the weighting functionality can be ignored. In more complex study designs, observation level weights can be provided which allows weighted contribution to the likelihood function during model training. Weighting the likelihood function is currently experimental, but we plan to evaluate this utility further in future work. Finally, the `coord` object contains the observation identifier for each row of the **TAD** making it easy to identify the rows associated with a single or set of observations from the **TAD**.
+Below the `trn` object is displayed. The `trn` object generated in this step is a dictionary of arrays containing the **TAD** components. The `y` and `x` components are the corresponding outcome and covariates of the **TAD**. The `w` object is an array of weight values generated by the `get_surv_pre_train` function. By default all weights are set to $1$ and do not contribute to model training. For general use, the weighting functionality can be ignored. In more complex study designs, observation level weights can be provided which allows weighted contribution to the likelihood function during model training. Weighting the likelihood function is currently experimental, but we plan to evaluate this utility further in future work. Finally, the `coord` object contains the observation identifier for each row of the **TAD**, making it easy to identify the rows associated with a single or set of observations from the **TAD**.
 
 ```python
 # {'y': array([[0.],
@@ -542,7 +542,7 @@ Below the `trn` object is displayed. The `trn` object generated in this step is 
 
 
 
-The next step is to initialize the model, which involves setting several parameter values. The key considerations when initializing the models is number of trees and the split rules. The number of trees controls how many regression trees will be used. Typically 50 trees is a good default, but it can be adjusted to assist in model performance. Split rules is a specific `PyMC-BART` parameter and is used to designate the how the regression trees are constructed. The one requirement of the split rules is that the time covariate has to be set as a `pmb.ContinuousSplitRule()`. Otherwise, continuous variables can assigned `pmb.ContinuousSplitRule()` and categorical variables assigned `pmb.OneHotSplitRule()`. It is is recommended to review the `PyMC-BART` literature for more information regarding parameterization of the models.
+The next step is to initialize the model, which involves setting several parameter values. The key considerations when initializing the models is number of trees and the split rules. The number of trees controls how many regression trees will be used. Typically 50 trees is a good default, but it can be adjusted to assist in model performance. Split rules is a specific `PyMC-BART` parameter and is used to designate the how the regression trees are constructed. The one requirement of the split rules is that the time covariate has to be set as a `pmb.ContinuousSplitRule()`. Otherwise, continuous variables can be assigned `pmb.ContinuousSplitRule()` and categorical variables assigned `pmb.OneHotSplitRule()`. It is is recommended to review the `PyMC-BART` literature for more information regarding parameterization of the models.
 
 ```python
 ######################################
@@ -594,7 +594,7 @@ post1 = BSM.sample_posterior_predictive(
 )
 ```
 
-Finally the survival probability can derived from the $p_{ij}$ estimates. 
+Finally, the survival probability can derived from the $p_{ij}$ estimates. 
 ```python
 # Convert to SV probability.
 sv_prob = sb.get_sv_prob(post1)
@@ -602,6 +602,7 @@ print(sv_prob["sv"].shape)
 # (1600, 432, 13)
 ```
 The sv_prob object above is a dictionary containing numpy arrays of both the $p_{ij}$ and $s_{ij}$ estimates, labeled "prob" and "sv" respectively. The $p$,$s$ arrays are three dimensional with the dimensions of the arrays being:
+
 - axis 0 = draws of the posterior predictive distribution: 1600
 - axis 1 = observations $i$: 432
 - axis 2 = times $j$: 13
