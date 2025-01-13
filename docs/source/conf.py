@@ -16,11 +16,17 @@ author = 'Jacob Tiegs'
 extensions = ['sphinx.ext.autodoc', 
                 'sphinx.ext.coverage', 
                 'sphinx.ext.napoleon',
-                "nbsphinx"
+                "nbsphinx",
+                "myst_parser"
                 ]
 
 templates_path = ['_templates']
 exclude_patterns = []
+
+myst_enable_extensions = [
+    "dollarmath",
+    "amsmath"
+]
 
 
 

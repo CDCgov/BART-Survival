@@ -1,4 +1,4 @@
-Examples
+Examples Notebooks
 ========
 
 Example notebooks providing demonstration of the BART-survival functionality.

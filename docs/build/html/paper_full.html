@@ -1,0 +1,669 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Methods &mdash; BART-Survival  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="simulation" href="simulation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BART-Survival
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Methods</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#background">Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-preparation">Data Preparation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model">Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#survival">Survival</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#marginal-effects">Marginal Effects</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#demonstration">Demonstration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BART-Survival</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Methods</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/paper_full.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="methods">
+<h1>Methods<a class="headerlink" href="#methods" title="Link to this heading"></a></h1>
+<p>The following sections provides details on the methods employed by the <code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> library, focusing specifically on the discrete-time survival algorithm used. For review of the BART algorithm we refer to associated <code class="docutils literal notranslate"><span class="pre">PyMC-BART</span></code> publication [&#64;quiroga2023].</p>
+<section id="background">
+<h2>Background<a class="headerlink" href="#background" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> package provides a discrete-time survival method which aims to model survival as a function of a series of probabilities that indicate the probability of event occurrence at each discrete time. For clarity, the probability of event occurrence at each discrete time will be referred to as the risk probability.</p>
+<p>In combination with a structural configuration of the data, the discrete-time algorithm allows for flexible modeling of the risk probabilities as a non-parametric function of time and observed covariates. The series of probability risks can then be used to derive the survival probabilities, along with other estimates of interest.</p>
+<p>The foundation of the method is simple and is based off the well-defined Kaplan-Meier Product-Limit estimator. While a full review of the Kaplan-Meier method can be found elsewhere [&#64;stel2011], the following example demonstrates the fundamental concepts of discrete-time survival analysis that motivates its application within the <code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> method.</p>
+<ol class="arabic">
+<li><p>Starting with a simple event-time dataset, create a sequence of time intervals that represent the unique discrete-time intervals observed in the data. Each interval is represented as a <span class="math notranslate nohighlight">\(t_j\)</span>, where <span class="math notranslate nohighlight">\(j = {1,...,k}\)</span> and <span class="math notranslate nohighlight">\(k\)</span> is the length of the set of unique observed times.</p>
+<p>For example if the observed event-time data is:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix} 
+    \text{event status} &amp;\text{event time} \\
+    --- &amp;---\\
+        1 &amp; 1 \\
+        0 &amp; 2 \\
+        1 &amp; 2 \\
+        1 &amp; 4 \\
+        1 &amp; 4 \\
+        1 &amp; 5 \\
+    \end{matrix}
+    \end{split}\]</div>
+<p>Then the set of unique observed times is <span class="math notranslate nohighlight">\([1,2,4,5]\)</span> with <span class="math notranslate nohighlight">\(k = 4\)</span> indices and the corresponding <span class="math notranslate nohighlight">\(t_j\)</span> intervals are:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix} 
+    \text{index} &amp;\text{interval} \\
+    --- &amp;---\\
+        t_1 &amp; (0,1] \\
+        t_2 &amp; (1,2] \\
+        t_3 &amp; (2,4] \\
+        t_4 &amp; (4,5] \\
+    \end{matrix}
+    \end{split}\]</div>
+<p>In the table above the intervals are denoted with the properties, “<span class="math notranslate nohighlight">\((\)</span>” indicating exclusive times and “<span class="math notranslate nohighlight">\(]\)</span>” indicating inclusive times in an interval. Additionally, the <strong>event status</strong> column is defined as <span class="math notranslate nohighlight">\((1 = \text{event}, 0 = \text{censor})\)</span></p>
+</li>
+<li><p>Then with the constructed time intervals <span class="math notranslate nohighlight">\(t_1,...,t_k\)</span>, tally the following for each interval:</p>
+<ul class="simple">
+<li><p>the number of observations with an event</p></li>
+<li><p>the number of observation censored</p></li>
+<li><p>the total number of observations eligible to have an event  (at risk) at the start of the interval</p></li>
+</ul>
+<p>Continuing the above example, the corresponding frequencies for each interval are:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix} 
+    \text{index} &amp;\text{interval} &amp;\text{event} &amp;\text{censor} &amp; \text{at risk}\\
+    --- &amp;---&amp;---&amp;---&amp;---\\
+        t_1 &amp; (0,1] &amp; 1  &amp;   &amp; 6 \\
+        t_2 &amp; (1,2] &amp;  1 &amp; 1 &amp; 5 \\
+        t_3 &amp; (2,4] &amp;  2 &amp;   &amp; 3 \\
+        t_4 &amp; (4,5] &amp;  1 &amp;   &amp; 1 \\
+    \end{matrix}
+    \end{split}\]</div>
+</li>
+<li><p>Finally, the risk of event occurrence within each interval <span class="math notranslate nohighlight">\(t_j\)</span> can simply be derived as:</p>
+<div class="math notranslate nohighlight">
+\[
+    P_{t_j} = \frac {\text{n events}_{t_j}} {\text{n at risk}_{t_j}} \text{,}
+    \]</div>
+<p>and the survival probability at a time-index <span class="math notranslate nohighlight">\(j\)</span>, can be derived as:</p>
+<div class="math notranslate nohighlight">
+\[
+    S(t_j) = \prod_{q=1}^{j} (1-P_{t_q}) \text{ .}
+    \]</div>
+<p>Applied to our example the risks of event <span class="math notranslate nohighlight">\(P_{t_j}\)</span> are:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix} 
+    \text{index} &amp;\text{interval} &amp;\text{event} &amp;\text{censor} &amp; \text{at risk} &amp; P_{t_j} \\
+    --- &amp;---&amp;---&amp;---&amp;---&amp;---    \\
+    t_1 &amp; (0,1] &amp; 1  &amp;   &amp; 6 &amp; 0.167 \\
+    t_2 &amp; (1,2] &amp;  1 &amp; 1 &amp; 5 &amp;  0.2 \\
+    t_3 &amp; (2,4] &amp;  2 &amp;   &amp; 3 &amp;  0.667 \\
+    t_4 &amp; (4,5] &amp;  1 &amp;   &amp; 1 &amp;  1.0 \\
+    \end{matrix}
+    \end{split}\]</div>
+<p>And the corresponding survival estimates at times <span class="math notranslate nohighlight">\([1,2,4,5]\)</span> are:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix} 
+    \text{index} &amp;\text{time} &amp; \text{survival} \\
+    ---&amp;--- &amp;---\\
+    t_1  &amp;  1 &amp;  .83\\
+    t_2  &amp;  2 &amp;  .67 \\
+    t_3  &amp;  4 &amp;  .22\\
+    t_4  &amp;  5 &amp;  0 \\
+    \end{matrix}
+    \end{split}\]</div>
+</li>
+</ol>
+<p><code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> builds off this simple foundation by replacing each naively derived <span class="math notranslate nohighlight">\(P_{t_j}\)</span> with a probability risk prediction, <span class="math notranslate nohighlight">\(p_{t_{j}|x_{ij}}\)</span> yielded from the BART regression model. The <span class="math notranslate nohighlight">\(x_{ij}\)</span> values are the associated covariate values for each observation <span class="math notranslate nohighlight">\(i\)</span> at each discrete time <span class="math notranslate nohighlight">\(j\)</span>. The predicted values <span class="math notranslate nohighlight">\(p_{t_j|x_{ij}}\)</span> can be further transformed into survival probability estimates or other estimands of interest. Formally, the survival probability estimate for a single observation <span class="math notranslate nohighlight">\(i\)</span> at time-index <span class="math notranslate nohighlight">\(j\)</span> can be derived as:</p>
+<div class="math notranslate nohighlight">
+\[
+S(t_j|x_i) = \prod_{q=1}^{j} (1-p_{t_q|x_{iq}}) \text{.}
+\]</div>
+</section>
+<section id="data-preparation">
+<h2>Data Preparation<a class="headerlink" href="#data-preparation" title="Link to this heading"></a></h2>
+<p>As displayed in the above example, survival data is typically given as paired (<em>event status</em>, <em>event time</em>) outcomes, along with a set of covariates <span class="math notranslate nohighlight">\(x_i\)</span> for each observation. In this setup, <em>event status</em> is typically a binary variable, with <span class="math notranslate nohighlight">\(1=\)</span> <strong>event</strong> and  <span class="math notranslate nohighlight">\(0=\)</span> <strong>censored</strong>.</p>
+<p>Obtaining the <span class="math notranslate nohighlight">\(p_{t_j|x_{ij}}\)</span> values and subsequent survival estimates is a two-step process. Each step of the process requires generating a specialized augmented datasets from the generic survival data. The first step in the process involves training the <span class="math notranslate nohighlight">\(\text{BART}\)</span> model which requires the <strong>training augmented dataset</strong> (<strong>TAD</strong>). The second step involves generating the <span class="math notranslate nohighlight">\(p_{t_j|x_{ij}}\)</span> predictions from the trained <span class="math notranslate nohighlight">\(\text{BART}\)</span> model, which requires the <strong>predictive augmented dataset</strong> (<strong>PAD</strong>).</p>
+<p>The <strong>TAD</strong> is created by transforming each single observation row into a series of rows representing the observation over a time series. When transformed a single observation’s information is represented as a series of tuples, each tuple containing the augmented values of <em>status</em> and <em>time</em>, as well as replicates of the covariates <span class="math notranslate nohighlight">\(x\)</span>. The series of tuples is constructed using the <span class="math notranslate nohighlight">\(k\)</span> distinct times from the generic dataset. These times are represented by <span class="math notranslate nohighlight">\(t\)</span>, which can be indexed by <span class="math notranslate nohighlight">\(j\)</span>, where <span class="math notranslate nohighlight">\(j\)</span> is in the set <span class="math notranslate nohighlight">\(1,...,k\)</span>. Then for each observation’s <em>event time</em><span class="math notranslate nohighlight">\(_i\)</span> there is an index <span class="math notranslate nohighlight">\(j\)</span> in <span class="math notranslate nohighlight">\(1,...,k\)</span> where <span class="math notranslate nohighlight">\(t_{j}\)</span> <span class="math notranslate nohighlight">\(=\)</span> <em>event time</em><span class="math notranslate nohighlight">\(_i\)</span> . This special index <span class="math notranslate nohighlight">\(j\)</span> is denoted as <span class="math notranslate nohighlight">\(m_i\)</span> and can be defined as:</p>
+<div class="math notranslate nohighlight">
+\[ t_{m_i} = t_j = \text{event time}_i \text{.}\]</div>
+<p>For each observation, a set of tuples is created containing a total of <span class="math notranslate nohighlight">\(m_i\)</span> tuples which are used to represent that observation’s information. Each tuple is created for a specific time <span class="math notranslate nohighlight">\(t_j\)</span> where <span class="math notranslate nohighlight">\(j = 1,...,m_i\)</span>. Additionally, for all tuples with times <span class="math notranslate nohighlight">\(t_j &lt; t_{m_i}\)</span> the value of <em>status</em> is set to <span class="math notranslate nohighlight">\(0\)</span> and for the time <span class="math notranslate nohighlight">\(t_j = t_{m_i}\)</span> the value of <em>status</em> is set to the value <em>event status</em><span class="math notranslate nohighlight">\(_i\)</span>. Covariate information is simply replicated across tuples.</p>
+<p>For example if the survival data is:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\left[
+\begin{matrix} 
+\text{observation} &amp;\text{status} &amp;\text{time} \\
+--- &amp;--- &amp;---\\
+    1&amp; 1 &amp; 4\\
+    2&amp; 0 &amp; 6 \\
+    3&amp; 1 &amp; 6 \\
+    4&amp; 1 &amp; 7 \\
+    5&amp; 1 &amp; 8 \\
+    \pmb{6}&amp; \pmb{0} &amp; \pmb{8} \\
+    \pmb{7} &amp;\pmb{1} &amp; \pmb{12} \\
+    8 &amp;1 &amp; 14 \\
+\end{matrix}
+\right]
+\space \space \text{with} \space \space
+\begin{matrix}
+\text{unique times (k=6)}\\
+---\\
+4\\6\\7\\8\\12\\14
+\end{matrix}
+\end{split}\]</div>
+<p>Then the transformation for observation <span class="math notranslate nohighlight">\(7\)</span> would be represented in the <em>augmented</em> dataset as the sequence of rows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{matrix} 
+\text{observation} &amp; \text{status} &amp;\text{time} \\
+---&amp; --- &amp;---\\
+    7 &amp; 0 &amp; 4\\
+    7 &amp; 0 &amp; 6 \\
+    7 &amp; 0 &amp; 7 \\
+    7 &amp; 0 &amp; 8 \\
+    7 &amp; 1 &amp; 12 \\
+\end{matrix}
+\end{split}\]</div>
+<p>Similarly, the transformation for observation <span class="math notranslate nohighlight">\(6\)</span> would be represented as:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{matrix} 
+\text{observation} &amp; \text{status} &amp;\text{time} \\
+---&amp; --- &amp;---\\
+    6 &amp; 0 &amp; 4\\
+    6 &amp; 0 &amp; 6 \\
+    6 &amp; 0 &amp; 7 \\
+    6 &amp; 0 &amp; 8 \\
+\end{matrix}
+\end{split}\]</div>
+<p>It is important to reiterate that for each observation <span class="math notranslate nohighlight">\(i\)</span>, the new set of rows created only include the time points <span class="math notranslate nohighlight">\(t_j \le t_{m_i}\)</span>. For observation <span class="math notranslate nohighlight">\(\pmb{7}\)</span>, the <span class="math notranslate nohighlight">\(t_{m_i} = 12\)</span> and the corresponding times in the <strong>TAD</strong> are <span class="math notranslate nohighlight">\(4,6,7,8,12\)</span>. For observation <span class="math notranslate nohighlight">\(\pmb{6}\)</span>, the <span class="math notranslate nohighlight">\(t_{m_i} = 8\)</span> and the corresponding times in the <strong>TAD</strong> are <span class="math notranslate nohighlight">\(4,6,7,8\)</span>.</p>
+<p>The utility of the <strong>TAD</strong> is that it unlinks <em>event time</em> from the <em>event status</em>. In this setup, the constructed <em>status</em> variable (which is a simple binary variable taking values <span class="math notranslate nohighlight">\(1\)</span> or <span class="math notranslate nohighlight">\(0\)</span>) represents the outcome and <em>time</em> is a covariate. Then treating each row of the <strong>TAD</strong> as an independent observation, the outcome can be modeled as a binary regression of <em>status</em> over <em>time</em> and any additional covariates <span class="math notranslate nohighlight">\(x\)</span>. The trained regression model from this dataset can be used to yield probability predictions for each time <span class="math notranslate nohighlight">\(t_j\)</span> for <span class="math notranslate nohighlight">\(j\)</span> in <span class="math notranslate nohighlight">\(1,...,k\)</span>. These probability predictions hold the interpretation as being the probability risk of event occurrence at each time conditional on the event not having already occurred at a previous time. The predictions for each observation <span class="math notranslate nohighlight">\(i\)</span> and time <span class="math notranslate nohighlight">\(t_j\)</span> can be used to yield the various analytic targets, such as survival probabilities.</p>
+<p>To generate the predictions of probability risks over the observed times, the <strong>PAD</strong> dataset is used. The <strong>PAD</strong> transformation is similar to the <strong>TAD</strong>, but is simpler in that for each observation a set of size <span class="math notranslate nohighlight">\(k\)</span> tuples is created. Each tuple in the set contains the time <span class="math notranslate nohighlight">\(t_j\)</span> for <span class="math notranslate nohighlight">\(j=1,...,k\)</span> and any additional covariates <span class="math notranslate nohighlight">\(x\)</span>.</p>
+<p>Continuing the examples above, there are <span class="math notranslate nohighlight">\(k=6\)</span> the unique times. For <span class="math notranslate nohighlight">\(j=1,...,k\)</span> the resulting distinct times are <span class="math notranslate nohighlight">\(t_j = 4,6,7,8,12,14\)</span> and the <strong>PAD</strong>s for observations <span class="math notranslate nohighlight">\(6\)</span>, and <span class="math notranslate nohighlight">\(7\)</span> would be:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{matrix} 
+\text{observation} &amp; \text{time} \\
+---&amp; --- \\
+    6 &amp;  4\\
+    6 &amp;  6 \\
+    6 &amp;  7 \\
+    6 &amp;  8 \\
+    6 &amp;  12 \\
+    6 &amp;  14 \\
+    \\
+    7 &amp;  4\\
+    7 &amp;  6 \\
+    7 &amp;  7 \\
+    7 &amp;  8 \\
+    7 &amp;  12 \\
+    7 &amp;  14 \\
+\end{matrix}
+\end{split}\]</div>
+<p>Notably the <strong>TAD</strong> and <strong>PAD</strong> lengths can differ. <strong>PAD</strong> length is simple to calculate. If <span class="math notranslate nohighlight">\(n\)</span> is the number of observations in the generic dataset and <span class="math notranslate nohighlight">\(k\)</span> is the number of the unique times observed in the generic dataset, then the length of the <strong>PAD</strong> is simply <span class="math notranslate nohighlight">\(n * k\)</span>. In the example data above it would be <span class="math notranslate nohighlight">\((8*6)=48\)</span>.</p>
+<p>The <strong>TAD</strong> length can be calculated using each observation’s <span class="math notranslate nohighlight">\(m_i\)</span>, which again is defined as being the index that resolves <span class="math notranslate nohighlight">\(t_{m_i}=\)</span> <em>event time</em><span class="math notranslate nohighlight">\(_i\)</span>. The <strong>TAD</strong> length can be calculated as:</p>
+<div class="math notranslate nohighlight">
+\[ \pmb{TAD}_{\text{length}} = \sum_{i=1}^{n}{m_i} \text{.}\]</div>
+<p>This can be demonstrated with the example dataset, where the <strong>TAD</strong> length can be found as the sum of the <span class="math notranslate nohighlight">\(m_i\)</span> column which resolves to a <strong>TAD</strong> length of <span class="math notranslate nohighlight">\(27\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix}
+    \text{observation} &amp; \text{event time}_i &amp; m_i\\
+    ---&amp;---&amp;---\\
+    1 &amp; 4 &amp; 1\\
+    2 &amp; 6 &amp; 2\\
+    3 &amp; 6 &amp; 2\\
+    4 &amp; 7 &amp; 3\\
+    5 &amp; 8 &amp; 4\\
+    6 &amp; 8 &amp; 4\\
+    7 &amp; 12 &amp; 5\\
+    8 &amp; 14 &amp; 6\\
+    &amp;&amp;---\\
+    &amp;&amp;27
+    \end{matrix} 
+\end{split}\]</div>
+<p>While the <strong>PAD</strong> and <strong>TAD</strong> lengths are not important for generating the models, they are helpful to keep in mind when completing an analysis. Specifically, the fact that the <strong>TAD</strong> and <strong>PAD</strong> can be far larger in length than the generic dataset. For example the generic dataset used above is only <span class="math notranslate nohighlight">\(8\)</span> rows in length, but the <strong>TAD</strong> and <strong>PAD</strong> dataset are <span class="math notranslate nohighlight">\(27\)</span> and <span class="math notranslate nohighlight">\(48\)</span> rows respectively.</p>
+<p>When the length of the two datasets become large enough to make computation difficult it is recommended to downscale the <em>event time</em> values, which will reduce the length of the two augmented datasets. The downscaling algorithm we provide in the library takes the <em>event time</em>, divides by a scaling factor and then takes the “ceiling” truncation to create the new <em>scaled event time</em>. Below the downscaling algorithm is demonstrated with the example dataset using a scaling factor of <span class="math notranslate nohighlight">\(4\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix}
+    \text{ time} &amp; \text{downscaled time} &amp; \text{rescaled time} \\ 
+    ---&amp;---&amp;---\\
+    4 &amp; 1 &amp; 4\\
+    6 &amp; 2 &amp; 8\\
+    6 &amp; 2 &amp; 8\\
+    7 &amp; 2 &amp; 8\\
+    8 &amp; 2 &amp; 8\\
+    8 &amp; 2 &amp; 8\\
+    12 &amp; 3 &amp; 12\\
+    14 &amp; 4 &amp; 16\\
+    \end{matrix} 
+\end{split}\]</div>
+<p>Downscaling the <em>event time</em> values causes loss of granularity in the set of discrete times analyzed. As shown in the example above, after downscaling (and then rescaling) the analytic targets can only be derived for the times <span class="math notranslate nohighlight">\(4,8,12\)</span> and <span class="math notranslate nohighlight">\(16\)</span>, which is reduced from the original set of times, <span class="math notranslate nohighlight">\(4,6,7,8,12,14\)</span>. While the analytic targets cannot be returned for the times <span class="math notranslate nohighlight">\(6,7,14\)</span>, the training information contributed by the observations with these <em>event times</em> is maintained through subsequent contribution at the downscaled times. Since there is no loss of event information, the probability of event at the downscaled times <span class="math notranslate nohighlight">\(4,8,12,16\)</span> will be equal to the probability of event from a non-downscaled dataset at the select time <span class="math notranslate nohighlight">\(4,8,12,16\)</span>.</p>
+<p>Downscaling can be safely applied to datasets without loss of precision of estimates at the downscaled times. The only consideration required when using a downscaling procedure is to ensure that the downscaled times granularity fulfills the needs of the analysis. For example, in a multi-year health-outcomes study, downscaling from days to months could significantly reduce computational burden without a meaningful loss of information in the outcome. However, if that same study reduced time from days to years, this could lead to loss of meaningful information in the outcome. The considerations for downscaling need to be made on a study-to-study basis and no general recommendation on selecting a downscaling factor can be provided.</p>
+</section>
+<section id="model">
+<h2>Model<a class="headerlink" href="#model" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> algorithm is two-step algorithm. First, the <strong>TAD</strong> is used to train a non-parametric regression model of <em>status</em> on <em>time</em> and covariates. Then the <strong>PAD</strong> is used to yield predicted probabilities at each discrete time. These probability of event predictions can be used generate all additional estimates useful for statistical inference.</p>
+<p>To motivate the use of the <strong>TAD</strong> in training the regression model, an example <strong>TAD</strong> is displayed below. Here, <em>status</em> can be represented as the outcome vector of <span class="math notranslate nohighlight">\(y_{ij}\)</span> values and <em>time</em> is represented by the <span class="math notranslate nohighlight">\(t_{ij}\)</span> values. Additional covariates are represented by a vector of <span class="math notranslate nohighlight">\(x_{ij}\)</span> values. The subscript <span class="math notranslate nohighlight">\(i\)</span> refers to the <span class="math notranslate nohighlight">\(i^{th}\)</span> observation of the generic dataset and the subscript <span class="math notranslate nohighlight">\(j\)</span> refers to the <span class="math notranslate nohighlight">\(j^{th}\)</span> index of the unique set of discrete times previously defined as <span class="math notranslate nohighlight">\(t\)</span>. In the <strong>TAD</strong> and <strong>PAD</strong>, the <span class="math notranslate nohighlight">\(i\)</span>, <span class="math notranslate nohighlight">\(j\)</span> indices can be thought of as multi-indices over the rows.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix}
+    i &amp; j &amp; y &amp; t &amp; x \\ 
+    -&amp;-&amp;-&amp;- &amp;- &amp;\\
+    1 &amp; 1 &amp; 0 &amp; 3 &amp; x_{11} \\
+    1 &amp; 2 &amp; 0 &amp; 4 &amp; x_{12} \\
+    1 &amp; 3 &amp; 1 &amp; 6&amp; x_{13}  \\
+    2 &amp; 1 &amp; 0 &amp; 3 &amp; x_{21} \\
+    2 &amp; 2 &amp; 1 &amp; 4 &amp; x_{22} \\
+    3 &amp; 1 &amp; 0 &amp; 3 &amp; x_{31} \\
+    3 &amp; 2 &amp; 0 &amp; 4 &amp; x_{32} \\
+    3 &amp; 3 &amp; 1 &amp; 6 &amp; x_{33} \\
+    \end{matrix} 
+\end{split}\]</div>
+<p>When using the <strong>TAD</strong>, each <span class="math notranslate nohighlight">\(y_{ij}\)</span> value can then be treated as independent draw of a <span class="math notranslate nohighlight">\(Bernoulli\)</span> distribution parameterized with the probability of event <span class="math notranslate nohighlight">\(p_{ij}\)</span> for observation <span class="math notranslate nohighlight">\(i\)</span> at time index <span class="math notranslate nohighlight">\(j\)</span>. The <span class="math notranslate nohighlight">\(p_{ij}\)</span> values are collected as the latent values yielded from a <span class="math notranslate nohighlight">\(probit\)</span> regression of <span class="math notranslate nohighlight">\(y\)</span> on <span class="math notranslate nohighlight">\(t\)</span> and <span class="math notranslate nohighlight">\(x\)</span>. Formally the model is defined as:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{aligned}
+    y_{ij} | p_{ij} \sim Bernoulli(p_{ij}) \text{,}\\
+    p_{ij} | \mu_{ij} = \Phi(\mu_{ij}) \text{,}\\
+    \mu_{ij} \sim \text{BART}(t_{ij},x_{ij}) \text{,}\\
+\end{aligned}
+\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\Phi\)</span> is the normal cumulative distribution function and <span class="math notranslate nohighlight">\(\text{BART}\)</span> is the ensemble of regression trees that yield the <span class="math notranslate nohighlight">\(\mu_{ij}\)</span> value for a given <span class="math notranslate nohighlight">\(t_{ij}\)</span>, <span class="math notranslate nohighlight">\(x_{ij}\)</span> combination.</p>
+<p>Regarding the <span class="math notranslate nohighlight">\(\text{BART}\)</span> algorithm, in brief <span class="math notranslate nohighlight">\(\text{BART}\)</span> is a Bayesian approach to the ensemble regression trees class of non-parametric models. <span class="math notranslate nohighlight">\(\text{BART}\)</span> uses a combination of Bayesian priors placed on the tree generating components and a Markov Chain Monte Carlo sampling algorithm to iteratively generate tree ensembles. These tree ensemble are collected as samples of the posterior distribution. The samples of the posterior distribution are subsequently used to generate distinct posterior predictive distributions for a given set of observations.</p>
+<p>This implies that for each <span class="math notranslate nohighlight">\(t_{ij}\)</span>, <span class="math notranslate nohighlight">\(x_{ij}\)</span> combination, the algorithm first returns a distribution of <span class="math notranslate nohighlight">\(p_{ij}\)</span> values, denoted as <span class="math notranslate nohighlight">\(p_{ij_{dist}}\)</span>. Each value in the <span class="math notranslate nohighlight">\(p_{ij_{dist}}\)</span> is a prediction mapped from a single tree ensemble of the posterior distribution. Point estimates and uncertainty intervals can be easily obtained from the <span class="math notranslate nohighlight">\(p_{ij_{dist}}\)</span> as simple estimates from that distribution. For example the mean can be derived as the empirical average of <span class="math notranslate nohighlight">\(p_{ij_{dist}}\)</span>. Similarly, the even-tailed <span class="math notranslate nohighlight">\(95\%\)</span> credible interval can be derived as the <span class="math notranslate nohighlight">\(5^{th}\)</span> and <span class="math notranslate nohighlight">\(95^{th}\)</span> percentiles of the <span class="math notranslate nohighlight">\(p_{ij_{dist}}\)</span>. Of note, any reference to <span class="math notranslate nohighlight">\(p_{ij}\)</span> used in this article is referring to the mean point estimate of the <span class="math notranslate nohighlight">\(p_{ij_{dist}}\)</span>.</p>
+<p>Further details regarding the <span class="math notranslate nohighlight">\(\text{BART}\)</span> implementation used in the <code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> algorithm can be found in <code class="docutils literal notranslate"><span class="pre">PyMC-BART</span></code> repository and the accompanying publication [&#64;quiroga2023].</p>
+</section>
+<section id="survival">
+<h2>Survival<a class="headerlink" href="#survival" title="Link to this heading"></a></h2>
+<p>A trained <code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> model is used along with the <strong>PAD</strong> to generate the vector of <span class="math notranslate nohighlight">\(p_{ij}\)</span> predictions. To generate survival estimates the <span class="math notranslate nohighlight">\(p_{ij}\)</span> vector is grouped by the <span class="math notranslate nohighlight">\(i\)</span> indices. Then using the following equation the survival probability at discrete times can be constructed:</p>
+<div class="math notranslate nohighlight">
+\[
+S(t_{q}| x_{iq}) = \prod_{j=1}^{q} (1-p_{ij}) \text{,}
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(q\)</span> is the index of the time for the desired estimate. As described in the previous section a full posterior predictive distribution is returned for each <span class="math notranslate nohighlight">\(S_{t_q,x_{iq}}\)</span>. Point estimates and credible intervals can be obtained through the empirical mean and percentile functions of the returned posterior predictive distribution for each <span class="math notranslate nohighlight">\(S(t_q|x_{iq})\)</span>.</p>
+</section>
+<section id="marginal-effects">
+<h2>Marginal Effects<a class="headerlink" href="#marginal-effects" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> provides capabilities to evaluate covariate effects through use of partial dependence functions which yield marginal effect estimates. The partial dependence function method involves generating predictions of <span class="math notranslate nohighlight">\(p\)</span> for the observations in a <strong>partial dependence augmented dataset</strong> (<strong>PDAD</strong>). Using variations of the <strong>PDAD</strong> yields different sets of predictions <span class="math notranslate nohighlight">\(p\)</span>. These sets can then be contrasted to yield marginal effect estimates, including marginal Hazard Ratios which have similar interpretation as the Cox Proportional Hazard Model’s conditional Hazard Ratios.</p>
+<p><strong>PDAD</strong>s can be created through further augmentation of the previously described <strong>PAD</strong>. As a reminder, the <strong>PAD</strong> contains the generated time covariate <span class="math notranslate nohighlight">\(t\)</span> and <span class="math notranslate nohighlight">\(k\)</span> replicates of each <span class="math notranslate nohighlight">\(x_i\)</span> from the generic dataset, where <span class="math notranslate nohighlight">\(k\)</span> is the length of the uniquely observed <em>event times</em>. Importantly <span class="math notranslate nohighlight">\(x_{i}\)</span> can be defined generically as the set of covariates <span class="math notranslate nohighlight">\(\{x_{1_i}, x_{2_i}, .., x_{m_i}\}\)</span>, where <span class="math notranslate nohighlight">\(m\)</span> is the index of the last included covariate.</p>
+<p>Then, starting with the <strong>PAD</strong>, the <strong>PDAD</strong> is generated through selection of a specific covariate <span class="math notranslate nohighlight">\(x_{[I]}\)</span>, from the set of covariates <span class="math notranslate nohighlight">\(\{x_{1}, x_{2}, ..., x_{m}\}\)</span> and setting that covariate to a deterministic value for all observation <span class="math notranslate nohighlight">\(i\)</span> and evaluated times <span class="math notranslate nohighlight">\(j\)</span>. The bracketed notation <span class="math notranslate nohighlight">\({[I]}\)</span> is used to define the index of the covariate selected and convey that the selected covariate is set to a deterministic value. Expanding the notation, <span class="math notranslate nohighlight">\(x_{[I] = v}\)</span> indicates that covariate of index <span class="math notranslate nohighlight">\(I\)</span> is selected and deterministically set to value <span class="math notranslate nohighlight">\(v\)</span>.</p>
+<p>In the following example the second covariate from a set of covariates <span class="math notranslate nohighlight">\(\{x_{1}, x_{2}, x_{3}\}\)</span> is of interest for evaluating marginal effects. This covariate is binary and takes the values <span class="math notranslate nohighlight">\({0,1}\)</span>. Evaluation of this covariate can be completed by creating <strong>PDAD</strong>s for possible values of the selected covariate. In each <strong>PDAD</strong> all of the observations and times are set to a deterministic values selected from the range of the covariate. The two generated <strong>PDAD</strong>s can be defined by the covariate index and set values: <span class="math notranslate nohighlight">\(x_{[2] = 0}\)</span> and <span class="math notranslate nohighlight">\(x_{[2]=1}\)</span>.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\text{PAD:} \space\space\space\space
+\begin{matrix}
+i &amp; j &amp; t &amp; x_1 &amp; x_2 &amp; x_3 \\ 
+-&amp;-&amp;-&amp;-&amp;-&amp;-&amp;\\
+1 &amp; 1 &amp; 2 &amp; 1.2 &amp; 0 &amp; 10\\
+1 &amp; 2 &amp; 3 &amp; 1.2 &amp; 0 &amp; 10\\
+1 &amp; 3 &amp; 5 &amp; 1.2 &amp; 0 &amp; 10\\
+2 &amp; 1 &amp; 2 &amp; 2.4 &amp; 1 &amp; 12\\
+2 &amp; 2 &amp; 3 &amp; 2.4 &amp; 1 &amp; 12\\
+2 &amp; 3 &amp; 5 &amp; 2.4 &amp; 1 &amp; 12\\
+3 &amp; 1 &amp; 2 &amp; 1.9 &amp; 0 &amp; 3\\
+3 &amp; 2 &amp; 3 &amp; 1.9 &amp; 0 &amp; 3\\
+3 &amp; 3 &amp; 5 &amp; 1.9 &amp; 0 &amp; 3\\
+\end{matrix} 
+\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \text{PDAD}_{x_{[2]=1}} \space\space\space\space
+    \begin{matrix}
+    i &amp; j &amp; t &amp; x_1 &amp; \pmb{x_2} &amp; x_3 \\ 
+    -&amp;-&amp;-&amp;-&amp;-&amp;-&amp;\\
+    1 &amp; 1 &amp; 2 &amp; 1.2 &amp; \pmb{1} &amp; 10\\
+    1 &amp; 2 &amp; 3 &amp; 1.2 &amp; \pmb{1} &amp; 10\\
+    1 &amp; 3 &amp; 5 &amp; 1.2 &amp; \pmb{1} &amp; 10\\
+    2 &amp; 1 &amp; 2 &amp; 2.4 &amp; \pmb{1} &amp; 12\\
+    2 &amp; 2 &amp; 3 &amp; 2.4 &amp; \pmb{1} &amp; 12\\
+    2 &amp; 3 &amp; 5 &amp; 2.4 &amp; \pmb{1} &amp; 12\\
+    3 &amp; 1 &amp; 2 &amp; 1.9 &amp; \pmb{1} &amp; 3\\
+    3 &amp; 2 &amp; 3 &amp; 1.9 &amp; \pmb{1} &amp; 3\\
+    3 &amp; 3 &amp; 5 &amp; 1.9 &amp; \pmb{1} &amp; 3\\
+    \end{matrix} 
+\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \text{PDAD}_{x_{[2]=0}} \space\space\space\space
+    \begin{matrix}
+    i &amp; j &amp; t &amp; x_1 &amp; \pmb{x_2} &amp; x_3 \\ 
+    -&amp;-&amp;-&amp;-&amp;-&amp;-&amp;\\
+    1 &amp; 1 &amp; 2 &amp; 1.2 &amp; \pmb{0} &amp; 10\\
+    1 &amp; 2 &amp; 3 &amp; 1.2 &amp; \pmb{0} &amp; 10\\
+    1 &amp; 3 &amp; 5 &amp; 1.2 &amp; \pmb{0} &amp; 10\\
+    2 &amp; 1 &amp; 2 &amp; 2.4 &amp; \pmb{0} &amp; 12\\
+    2 &amp; 2 &amp; 3 &amp; 2.4 &amp; \pmb{0} &amp; 12\\
+    2 &amp; 3 &amp; 5 &amp; 2.4 &amp; \pmb{0} &amp; 12\\
+    3 &amp; 1 &amp; 2 &amp; 1.9 &amp; \pmb{0} &amp; 3\\
+    3 &amp; 2 &amp; 3 &amp; 1.9 &amp; \pmb{0} &amp; 3\\
+    3 &amp; 3 &amp; 5 &amp; 1.9 &amp; \pmb{0} &amp; 3\\
+    \end{matrix} 
+\end{split}\]</div>
+<p>From the two <strong>PDAD</strong>s the predicted probabilities, <span class="math notranslate nohighlight">\(p_{x_{[2]=1}}\)</span>, <span class="math notranslate nohighlight">\(p_{x_{[2]=0}}\)</span> and survival probabilities <span class="math notranslate nohighlight">\(S_{x_{[2]=1}}\)</span>, <span class="math notranslate nohighlight">\(S_{x_{[2]=0}}\)</span>, can be generated:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix}
+    i &amp; j &amp; p_{x_{[2]=1}} &amp; S_{x_{[2]=1}} &amp; p_{x_{[2]=0}} &amp; S_{x_{[2]=0}}\\
+    -&amp;-&amp;-&amp;-&amp;-&amp;-\\
+    1 &amp; 1 &amp; .20 &amp; .80 &amp;.10 &amp; .90\\
+    1 &amp; 2 &amp; .25 &amp; .60 &amp;.15 &amp; .77\\
+    1 &amp; 3 &amp; .18 &amp; .49 &amp;.08 &amp; .70\\
+    2 &amp; 1 &amp; .10 &amp; .90 &amp;.08 &amp; .92 \\
+    2 &amp; 2 &amp; .13 &amp; .78 &amp;.11 &amp; .81\\
+    2 &amp; 3 &amp; .12 &amp; .69 &amp;.10 &amp; .74\\
+    3 &amp; 1 &amp; .20 &amp; .80 &amp;.15 &amp; .92\\
+    3 &amp; 2 &amp; .28 &amp; .58 &amp;.23 &amp; .82\\
+    3 &amp; 3 &amp; .23 &amp; .44 &amp;.18 &amp; .74\\
+    \end{matrix}
+\end{split}\]</div>
+<p>The marginal expectations of <span class="math notranslate nohighlight">\(p_{x_{[I]}}\)</span> and <span class="math notranslate nohighlight">\(S_{x_{[I]}}\)</span> at a specific time can be further derived by taking the average of the estimates over observations <span class="math notranslate nohighlight">\(i\)</span> for the specified time <span class="math notranslate nohighlight">\(t\)</span> indexed by <span class="math notranslate nohighlight">\(j\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[
+E_{i}[p_{x_{[I]}}|t_j] = {\frac 1 n} \sum_{i=1}^n {p_{ij,x_{[I]}}} \text{,}
+\]</div>
+<div class="math notranslate nohighlight">
+\[
+E_{i}[S_{x_{[I]}}(t_j)] = {\frac 1 n} \sum_{i=1}^n {S_{i,x_{[I]}}(t_j)} \text{,}
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(E_{i}\)</span> is the expectation over <span class="math notranslate nohighlight">\(i\)</span>,…,<span class="math notranslate nohighlight">\(n\)</span> observations. From the above example, this yields the expectations for time indices <span class="math notranslate nohighlight">\(j=\)</span> <span class="math notranslate nohighlight">\(1\)</span>,<span class="math notranslate nohighlight">\(2\)</span>,<span class="math notranslate nohighlight">\(3\)</span>.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix}
+    j &amp; t &amp; E_i[p_{x_2=1}] &amp; E_i[S_{x_2=1}] &amp; E_i[p_{x_2=0}] &amp; E_i[S_{x_2=0}]\\
+    -&amp;-&amp;-&amp;-&amp;-&amp;-\\
+    1 &amp; 2 &amp; 0.17 &amp; 0.83 &amp; 0.11 &amp; 0.91 \\ 
+    2 &amp; 3 &amp; 0.22 &amp; 0.65 &amp; 0.16 &amp; 0.8 \\
+    3 &amp; 5 &amp; 0.18 &amp; 0.54 &amp; 0.12 &amp; 0.73\\
+    \end{matrix}
+\end{split}\]</div>
+<p>These expectations can be further used to make comparisons between the evaluation of various values of <span class="math notranslate nohighlight">\(x_{[I]}\)</span> across multiple <strong>PDAD</strong>s. Common marginal effect estimates derived from these predicted values include:</p>
+<ul class="simple">
+<li><p>Marginal difference is survival probability at time <span class="math notranslate nohighlight">\(t\)</span>:</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[
+\text{Surv. Diff.}_{marg}(t_j) = E_{i}[S_{x_{[I] = v_2}}(t_j)] - E_{i}[S_{x_{[I] = v_1}}(t_j)] \text{.}
+\]</div>
+<ul class="simple">
+<li><p>Marginal Risk Ratio at time <span class="math notranslate nohighlight">\(t\)</span>:</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[
+\text{RR}_{marg}(t_j) = \frac {E_{i}[p_{j,x_{[I] = v_{2}}}]} {E_{i}[p_{j,x_{[I] = v_1}}]} \text{.}
+\]</div>
+<ul class="simple">
+<li><p>Marginal Hazard Ratio (expectation over <span class="math notranslate nohighlight">\(i\)</span> and times up to <span class="math notranslate nohighlight">\(t\)</span>):</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[
+\text{HR}_{marg}(t_{j}) = \frac {E_{ij}[p_{x_{[I]=v_2}}]} {E_{ij}[p_{x_{[I] = v_1}}]} \text{.}
+\]</div>
+<p>Continuing the example, the marginal effect of <span class="math notranslate nohighlight">\(x_2\)</span> as measured by difference in survival probability when <span class="math notranslate nohighlight">\(x_{[2]} = 1\)</span> and <span class="math notranslate nohighlight">\(x_{[2]} =0\)</span> at the times <span class="math notranslate nohighlight">\(2,3,5\)</span> can be examined below:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+    \begin{matrix}
+    j &amp; t &amp; \text{Surv.Diff.}\\
+    -&amp;-&amp;-&amp;\\
+    1 &amp; 2 &amp;-0.08 \\
+    2 &amp; 3 &amp;-0.15 \\
+    3 &amp; 5 &amp;-0.19 \\
+    \end{matrix}
+\end{split}\]</div>
+<p>These results can be conveniently interpreted. For example, at time <span class="math notranslate nohighlight">\(t=5\)</span> the increase of <span class="math notranslate nohighlight">\(x_2\)</span> from <span class="math notranslate nohighlight">\(0\)</span> to <span class="math notranslate nohighlight">\(1\)</span> leads to an average change in the survival probability of <span class="math notranslate nohighlight">\(-0.19\)</span>, where survival probability is in the range <span class="math notranslate nohighlight">\(0\)</span>-<span class="math notranslate nohighlight">\(1\)</span>. Additionally, as mentioned in the previous sections, all estimates of the model will first be yielded as posterior predictive distributions. The empirical mean and percentile function of this distribution yield the point estimates described above and their respective credible intervals.</p>
+</section>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="demonstration">
+<h1>Demonstration<a class="headerlink" href="#demonstration" title="Link to this heading"></a></h1>
+<p>The following is a brief demonstration on how to use the <code class="docutils literal notranslate"><span class="pre">BART-Survival</span></code> library. In the demonstration the <em>rossi</em> survival dataset from the lifelines library is used. The dataset contains one year of follow-up observation on 432 convicts who were released from Maryland state prisons in the 1970s. The primary event measured in this dataset is observation of a “new arrest” within that year and the associated “time to arrest” is given in weeks [&#64;rossi1980].</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">lifelines.datasets</span> <span class="kn">import</span> <span class="n">load_rossi</span>
+<span class="kn">from</span> <span class="nn">bart_survival</span> <span class="kn">import</span> <span class="n">surv_bart</span> <span class="k">as</span> <span class="n">sb</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1">######################################</span>
+<span class="c1"># Load rossi dataset from lifelines</span>
+<span class="n">rossi</span> <span class="o">=</span> <span class="n">load_rossi</span><span class="p">()</span>
+<span class="n">names</span> <span class="o">=</span> <span class="n">rossi</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+<span class="n">rossi</span> <span class="o">=</span> <span class="n">rossi</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>After loading the libraries and data, the first step is to generate the <strong>TAD</strong> and <strong>PAD</strong> datasets. In this step, the time (originally in weeks) is downscaled by a factor of 4, setting time to be measured in months.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">######################################</span>
+<span class="c1"># Transform data into &#39;augmented&#39; dataset</span>
+<span class="c1"># Requires creation of the training dataset and a predictive dataset for inference</span>
+<span class="c1"># TAD</span>
+<span class="n">trn</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">get_surv_pre_train</span><span class="p">(</span>
+    <span class="n">y_time</span><span class="o">=</span><span class="n">rossi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">y_status</span><span class="o">=</span><span class="n">rossi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">rossi</span><span class="p">[:,</span><span class="mi">2</span><span class="p">:],</span>
+    <span class="n">time_scale</span><span class="o">=</span><span class="mi">4</span>
+<span class="p">)</span>
+
+<span class="c1"># PAD</span>
+<span class="n">post_test</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">get_posterior_test</span><span class="p">(</span>
+    <span class="n">y_time</span><span class="o">=</span><span class="n">rossi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">y_status</span><span class="o">=</span><span class="n">rossi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">rossi</span><span class="p">[:,</span><span class="mi">2</span><span class="p">:],</span>
+    <span class="n">time_scale</span><span class="o">=</span><span class="mi">4</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Below the <code class="docutils literal notranslate"><span class="pre">trn</span></code> object is displayed. The <code class="docutils literal notranslate"><span class="pre">trn</span></code> object generated in this step is a dictionary of arrays containing the <strong>TAD</strong> components. The <code class="docutils literal notranslate"><span class="pre">y</span></code> and <code class="docutils literal notranslate"><span class="pre">x</span></code> components are the corresponding outcome and covariates of the <strong>TAD</strong>. The <code class="docutils literal notranslate"><span class="pre">w</span></code> object is an array of weight values generated by the <code class="docutils literal notranslate"><span class="pre">get_surv_pre_train</span></code> function. By default all weights are set to <span class="math notranslate nohighlight">\(1\)</span> and do not contribute to model training. For general use, the weighting functionality can be ignored. In more complex study designs, observation level weights can be provided which allows weighted contribution to the likelihood function during model training. Weighting the likelihood function is currently experimental, but we plan to evaluate this utility further in future work. Finally, the <code class="docutils literal notranslate"><span class="pre">coord</span></code> object contains the observation identifier for each row of the <strong>TAD</strong>, making it easy to identify the rows associated with a single or set of observations from the <strong>TAD</strong>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># {&#39;y&#39;: array([[0.],</span>
+<span class="c1">#         [0.],</span>
+<span class="c1">#         [0.],</span>
+<span class="c1">#         ...,</span>
+<span class="c1">#         [0.],</span>
+<span class="c1">#         [0.],</span>
+<span class="c1">#         [0.]]),</span>
+<span class="c1">#  &#39;x&#39;: array([[ 1.,  0., 27., ...,  0.,  1.,  3.],</span>
+<span class="c1">#         [ 2.,  0., 27., ...,  0.,  1.,  3.],</span>
+<span class="c1">#         [ 3.,  0., 27., ...,  0.,  1.,  3.],</span>
+<span class="c1">#         ...,</span>
+<span class="c1">#         [11.,  1., 24., ...,  0.,  1.,  1.],</span>
+<span class="c1">#         [12.,  1., 24., ...,  0.,  1.,  1.],</span>
+<span class="c1">#         [13.,  1., 24., ...,  0.,  1.,  1.]]),</span>
+<span class="c1">#  &#39;w&#39;: array([[1.],</span>
+<span class="c1">#         [1.],</span>
+<span class="c1">#         [1.],</span>
+<span class="c1">#         ...,</span>
+<span class="c1">#         [1.],</span>
+<span class="c1">#         [1.],</span>
+<span class="c1">#         [1.]]),</span>
+<span class="c1">#  &#39;coord&#39;: array([  0,   0,   0, ..., 431, 431, 431])}</span>
+</pre></div>
+</div>
+<p>The next step is to initialize the model, which involves setting several parameter values. The key considerations when initializing the models is number of trees and the split rules. The number of trees controls how many regression trees will be used. Typically 50 trees is a good default, but it can be adjusted to assist in model performance. Split rules is a specific <code class="docutils literal notranslate"><span class="pre">PyMC-BART</span></code> parameter and is used to designate the how the regression trees are constructed. The one requirement of the split rules is that the time covariate has to be set as a <code class="docutils literal notranslate"><span class="pre">pmb.ContinuousSplitRule()</span></code>. Otherwise, continuous variables can be assigned <code class="docutils literal notranslate"><span class="pre">pmb.ContinuousSplitRule()</span></code> and categorical variables assigned <code class="docutils literal notranslate"><span class="pre">pmb.OneHotSplitRule()</span></code>. It is is recommended to review the <code class="docutils literal notranslate"><span class="pre">PyMC-BART</span></code> literature for more information regarding parameterization of the models.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">######################################</span>
+<span class="c1"># Instantiate the BART models</span>
+<span class="c1"># model_dict is defines specific model parameters</span>
+<span class="n">model_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;trees&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="s2">&quot;split_rules&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;pmb.ContinuousSplitRule()&quot;</span><span class="p">,</span> <span class="c1"># time</span>
+        <span class="s2">&quot;pmb.OneHotSplitRule()&quot;</span><span class="p">,</span> <span class="c1"># fin</span>
+        <span class="s2">&quot;pmb.ContinuousSplitRule()&quot;</span><span class="p">,</span>  <span class="c1"># age</span>
+        <span class="s2">&quot;pmb.OneHotSplitRule()&quot;</span><span class="p">,</span> <span class="c1"># race</span>
+        <span class="s2">&quot;pmb.OneHotSplitRule()&quot;</span><span class="p">,</span> <span class="c1"># wexp</span>
+        <span class="s2">&quot;pmb.OneHotSplitRule()&quot;</span><span class="p">,</span> <span class="c1"># mar</span>
+        <span class="s2">&quot;pmb.OneHotSplitRule()&quot;</span><span class="p">,</span> <span class="c1"># paro</span>
+        <span class="s2">&quot;pmb.ContinuousSplitRule()&quot;</span><span class="p">,</span> <span class="c1"># prio</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+<span class="c1"># sampler_dict defines specific sampling parameters</span>
+<span class="n">sampler_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;draws&quot;</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
+            <span class="s2">&quot;tune&quot;</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
+            <span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+            <span class="s2">&quot;chains&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+            <span class="s2">&quot;compute_convergence_checks&quot;</span><span class="p">:</span> <span class="kc">False</span>
+        <span class="p">}</span>
+<span class="n">BSM</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">BartSurvModel</span><span class="p">(</span>
+    <span class="n">model_config</span><span class="o">=</span><span class="n">model_dict</span><span class="p">,</span> 
+    <span class="n">sampler_config</span><span class="o">=</span><span class="n">sampler_dict</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The model can then be trained with the <strong>TAD</strong> input and predicted <span class="math notranslate nohighlight">\(p_{ij}\)</span> values yielded with the <strong>PAD</strong> input.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">#####################################</span>
+<span class="c1"># Fit Model with TAD</span>
+<span class="n">BSM</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">y</span> <span class="o">=</span>  <span class="n">trn</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">],</span> 
+    <span class="n">X</span> <span class="o">=</span> <span class="n">trn</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span> 
+    <span class="n">weights</span><span class="o">=</span><span class="n">trn</span><span class="p">[</span><span class="s2">&quot;w&quot;</span><span class="p">],</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="n">trn</span><span class="p">[</span><span class="s2">&quot;coord&quot;</span><span class="p">],</span>
+    <span class="n">random_seed</span><span class="o">=</span><span class="mi">5</span>
+<span class="p">)</span>
+
+<span class="c1"># Get posterior predictive for evaluation using the PAD</span>
+<span class="n">post1</span> <span class="o">=</span> <span class="n">BSM</span><span class="o">.</span><span class="n">sample_posterior_predictive</span><span class="p">(</span>
+    <span class="n">X_pred</span><span class="o">=</span><span class="n">post_test</span><span class="p">[</span><span class="s2">&quot;post_x&quot;</span><span class="p">],</span> 
+    <span class="n">coords</span><span class="o">=</span><span class="n">post_test</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">]</span> 
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Finally, the survival probability can derived from the <span class="math notranslate nohighlight">\(p_{ij}\)</span> estimates.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Convert to SV probability.</span>
+<span class="n">sv_prob</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">get_sv_prob</span><span class="p">(</span><span class="n">post1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sv_prob</span><span class="p">[</span><span class="s2">&quot;sv&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>      
+<span class="c1"># (1600, 432, 13)</span>
+</pre></div>
+</div>
+<p>The sv_prob object above is a dictionary containing numpy arrays of both the <span class="math notranslate nohighlight">\(p_{ij}\)</span> and <span class="math notranslate nohighlight">\(s_{ij}\)</span> estimates, labeled “prob” and “sv” respectively. The <span class="math notranslate nohighlight">\(p\)</span>,<span class="math notranslate nohighlight">\(s\)</span> arrays are three dimensional with the dimensions of the arrays being:</p>
+<ul class="simple">
+<li><p>axis 0 = draws of the posterior predictive distribution: 1600</p></li>
+<li><p>axis 1 = observations <span class="math notranslate nohighlight">\(i\)</span>: 432</p></li>
+<li><p>axis 2 = times <span class="math notranslate nohighlight">\(j\)</span>: 13</p></li>
+</ul>
+<p>These arrays can be easily reduced down to point estimates and credible intervals using basic numpy methods. For example to get the estimate of the mean over all observations, first get the mean over the observations (axis 1) followed by the mean over the posterior draws (axis 0). The results being the estimated mean survival over the 13 time intervals.</p>
+<p>Similarly the 0.05-0.95 credible interval for the estimated mean survival can be returned as the quantile evaluations of the same mean-over-axis-1 array. This yields a (2,13) array with the lower and upper bounds (rows) of the credible interval defined for each time point (columns).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># get the mean value across observations for each time within each draw of the posterior predictive distribution</span>
+<span class="n">ave_obs</span> <span class="o">=</span> <span class="n">sv_prob</span><span class="p">[</span><span class="s2">&quot;sv&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ave_obs</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="c1"># (1600, 13)</span>
+
+<span class="c1"># get the average across the posterior draws </span>
+<span class="n">ave_obs_draws</span> <span class="o">=</span> <span class="n">ave_obs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ave_obs_draws</span><span class="p">)</span>
+<span class="c1">#[0.98282867 0.96457594 0.94578149 </span>
+<span class="c1"># 0.92613075 0.90503023 0.88429523 </span>
+<span class="c1"># 0.86382304 0.84376736 0.82281631 </span>
+<span class="c1"># 0.80169965 0.78080675 0.75948555 </span>
+<span class="c1"># 0.73816541]</span>
+
+<span class="c1"># get the .05 and .95 percentiles of the mean across posterior draws</span>
+<span class="n">ci_obs_draws</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">ave_obs</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ci_obs_draws</span><span class="p">)</span>
+<span class="c1"># lower bound</span>
+<span class="c1"># [0.97813492 0.95597036 0.93449701 </span>
+<span class="c1"># 0.91273325 0.88996273 0.86803963 </span>
+<span class="c1"># 0.84529644 0.82373944 0.8013158  </span>
+<span class="c1"># 0.77941446 0.75844137 0.73615453 </span>
+<span class="c1"># 0.71387   ]</span>
+<span class="c1"># upper bound</span>
+<span class="c1"># [0.9879464  0.97269846 0.95684153 </span>
+<span class="c1"># 0.93988969 0.91999613 0.90054844 </span>
+<span class="c1"># 0.8815908  0.86294746 0.84339772 </span>
+<span class="c1"># 0.82276706 0.80264632 0.78084766 </span>
+<span class="c1"># 0.76145384]</span>
+</pre></div>
+</div>
+<p>Examples of generation of marginal effect estimates can be found in the example notebooks provided in the repository documentation.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="simulation.html" class="btn btn-neutral float-left" title="simulation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Jacob Tiegs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

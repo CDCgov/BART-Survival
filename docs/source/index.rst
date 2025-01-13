@@ -11,6 +11,8 @@ BART-Survival is a Python package that allows time-to-event (survival analyses) 
    :caption: Contents:
    
    api
+   methods
+   demo
    examples
 
 
