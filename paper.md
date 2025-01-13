@@ -47,16 +47,16 @@ The need for a complete `BART-Survival` python package is given by the simple fa
 
 More specifically, the `BART-Survival` library abstracts away the complexities of generating the proper training and inference datasets, which are conceptually complex and prone to  being specified incorrectly if implemented from scratch. Similarly, the `BART-Survival` library provides a pre-specified internal Bayesian model using the `PyMC` probabilistic programming language. This pre-specified model is primarily accessed through the `BART-Survival` API removing the requirement for users to have more than a cursory knowledge of the `PyMC` or `PyMC-BART` libraries. Since the `BART-Survival` package is intended for students and professional in the public health and clinical fields, it is expected that users of the `BART-Survival` library will not have extensive programming expertise, adding to the need for a fully self-contained and accessible approach.
 
+
 In summary, the `BART-Survival` package provides a simple and accessible approach to implementing the BART survival algorithm. The provided approach can be beneficial for users who are looking for non-parametric alternatives to traditional (semi-)parametric survival analysis. The BART survival algorithm can be especially useful in large, complex healthcare data, where machine learning methods can demonstrate improved performance over the traditional methods. 
 
-
-# Conclusion
+# Conclusion 
 
 `BART-Survival` provides the computational methods required for completing non-parametric discrete-time survival analysis. This approach can have several advantages over alternative survival methods. These advantages include capabilities to incorporate non-linear and interaction effects into the model, naturally ability to regularize the model (which reduces the risk of over-fitting) and of being robust to issues of multi-collinearity. The `BART-Survival` approach is especially useful when the assumptions of alternative survival methods are violated. 
 
 Our `BART-Survival` algorithm has been tested in a rigorous simulation study, with additional applications to real-world data. While the manuscript for this work is currently under development, the results indicate similar performance as the the R-based BART survival method across settings of varied complexity. Both methods demonstrate the previously describe advantages over other survival approaches (such as Cox Proportional Hazard Models) when the relationships within the data becomes more complex or assumptions of the these other models are violated. A comparison of the R-based method and our `BART-Survival` algorithm is included in the [examples folder of the github repository](https://github.com/CDCgov/BART-Survival/blob/main/examples/pbart_rbart_comparison/lung.ipynb).
 
-Our library provides a convenient API for completing discrete-time survival analysis, along with the functionality to customize the methodology as needed. The associated API documentation can be found [here](https://cdcgov.github.io/BART-Survival/build/html/index.html), along with the associated github repository [`BART-Survival`](https://github.com/CDCgov/BART-Survival). A complete review of the methodology associated with the algorithm is provided in the appendix directory [appendix](https://cdcgov.github.io/BART-Survival/appendix).
+Our library provides a convenient API for completing discrete-time survival analysis, along with the functionality to customize the methodology as needed. The associated API documentation can be found [here](https://cdcgov.github.io/BART-Survival/build/html/index.html), along with the associated github repository [`BART-Survival`](https://github.com/CDCgov/BART-Survival). A extended review of method is additionally provided within the documentation and can be found [here](https://cdcgov.github.io/BART-Survival/build/html/methods.html).
 
 
 # Acknowledgements
