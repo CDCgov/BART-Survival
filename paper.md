@@ -20,9 +20,9 @@ authors:
     corresponding: true 
     affiliation: 1
 affiliations:
- - name: Inform and Disseminate Division, Office of Public Health Data, Surveillance, and Technology, Centers for Disease Control and Prevention, Atlanta, GA, United States of America
+ - name: Inform and Disseminate Division, Office of Public Health Data, Surveillance, and Technology, Centers for Disease Control and Prevention, Atlanta, Georgia, United States of America
    index: 1
- - name: Metas Solutions, Atlanta, Georgia
+ - name: Metas Solutions, Atlanta, Georgia, United States of America
    index: 2
 
 date: 08 August 2024
@@ -56,7 +56,7 @@ In summary, the `BART-Survival` package provides a simple and accessible approac
 
 Our `BART-Survival` algorithm has been tested in a rigorous simulation study, with additional applications to real-world data. While the manuscript for this work is currently under development, the results indicate similar performance as the the R-based BART survival method across settings of varied complexity. Both methods demonstrate the previously describe advantages over other survival approaches (such as Cox Proportional Hazard Models) when the relationships within the data becomes more complex or assumptions of the these other models are violated. A comparison of the R-based method and our `BART-Survival` algorithm is included in the [examples folder of the Github repository](https://github.com/CDCgov/BART-Survival/blob/main/examples/pbart_rbart_comparison/lung.ipynb).
 
-Our library provides a convenient API for completing discrete-time survival analysis, along with the functionality to customize the methodology as needed. The associated API documentation can be found [here](https://cdcgov.github.io/BART-Survival/build/html/index.html), along with the associated Github repository [`BART-Survival`](https://github.com/CDCgov/BART-Survival). A extended review of method is additionally provided within the documentation and can be found [here](https://cdcgov.github.io/BART-Survival/build/html/methods.html).
+Our library provides a convenient API for completing discrete-time survival analysis, along with the functionality to customize the methodology as needed. The associated API documentation can be found [here](https://cdcgov.github.io/BART-Survival/build/html/index.html), along with the associated Github repository [`BART-Survival`](https://github.com/CDCgov/BART-Survival). An extended review of the methods is additionally provided within the documentation and can be found [here](https://cdcgov.github.io/BART-Survival/build/html/methods.html).
 
 
 # Acknowledgements
