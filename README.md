@@ -1,4 +1,5 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14105188.svg)](https://doi.org/10.5281/zenodo.14105188)
+
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07213/status.svg)](https://doi.org/10.21105/joss.07213)
 
 
 ## Overview
