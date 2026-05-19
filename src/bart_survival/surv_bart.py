@@ -9,13 +9,279 @@ import pymc as pm
 import pymc_bart as pmb
 import xarray as xr
 import json
-import scipy.stats as sp
+import scipy as sp
 import warnings
 import pytensor.tensor as pt
 from pymc_bart.utils import _sample_posterior
 import cloudpickle as cpkl
 from numpy.random import RandomState
 import multiprocessing as mp
+from numba import njit, prange
+import copy
+
+import pymc_bart as pmb
+import numpy as np
+
+import pymc_bart as pmb
+import numpy as np
+import os
+
+import pymc_bart as pmb
+import numpy as np
+import os
+import copy
+
+
+
+for attr in ["stats_dtypes", "stats_dtypes_shapes", "_is_live_patched", "_unpatched_astep"]:
+    if hasattr(pmb.pgbart.PGBART, attr):
+        try: delattr(pmb.pgbart.PGBART, attr)
+        except: pass
+
+print("Applying 1D-Flattened Patch with RNG Burn-Off Breakout...")
+
+NUM_TREES = 50 
+MAX_NODES = 255
+
+pmb.pgbart.PGBART.stats_dtypes = [{
+    "variable_inclusion": object, 
+    "tune": bool,                  
+    "flat_f": object,              
+    "flat_t": object,
+    "flat_l": object,
+    "flat_r": object,
+    "flat_v": object,
+}]
+pmb.pgbart.PGBART.stats_dtypes_shapes = {}
+
+pmb.pgbart.PGBART._unpatched_astep = pmb.pgbart.PGBART.astep
+
+def _patched_astep(self, *args, **kwargs):
+    current_pid = os.getpid()
+    
+    # --- THE FAST-FORWARD ENTROPY BREAKOUT ---
+    if getattr(self, "_entropy_pid", None) != current_pid:
+        
+        # 1. Bruteforce the global numpy state just in case any underlying functions use it
+        np.random.seed(current_pid % 4294967295)
+        
+        # 2. THE BURN-OFF: Fast-forward the existing numpy Generator!
+        # Instead of replacing the RNG (which breaks tree pointers), we just consume 
+        # thousands of random numbers to permanently offset this worker's stream.
+        if hasattr(self, "rng") and hasattr(self.rng, "random"):
+            # Calculate a unique, large offset based on the PID
+            burn_count = (current_pid % 100) * 5000 + 1234
+            # Consume and discard the numbers
+            _ = self.rng.random(burn_count)
+
+        self._entropy_pid = current_pid
+
+    # --- RUN SAMPLING ---
+    res = self._unpatched_astep(*args, **kwargs)
+    point, stats = res
+    target_stats = stats[0] if isinstance(stats, list) else stats
+
+    # --- PRE-ALLOCATE FLAT 1D ARRAYS (Using float32 for thresholds!) ---
+    f_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+    l_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+    r_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+    t_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
+    v_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
+    
+    if not self.tune:
+        def extract_trees(obj):
+            if hasattr(obj, "tree_structure"): return [obj]
+            found = []
+            if isinstance(obj, (list, tuple, np.ndarray)):
+                for item in obj: found.extend(extract_trees(item))
+            return found
+        
+        active_forest = getattr(getattr(self, "bart", self), "trees", getattr(self, "all_trees", []))
+        true_trees = extract_trees(active_forest)
+        
+        if len(true_trees) >= NUM_TREES:
+            true_trees = true_trees[-NUM_TREES:]
+            
+        for tree_idx, tree in enumerate(true_trees):
+            if tree_idx >= NUM_TREES: break
+            offset = tree_idx * MAX_NODES
+            sorted_nodes = sorted(tree.tree_structure.items())
+            idx_map = {heap_idx: dense_idx for dense_idx, (heap_idx, _) in enumerate(sorted_nodes)}
+            
+            for dense_idx, (heap_idx, node) in enumerate(sorted_nodes):
+                if dense_idx >= MAX_NODES: break
+                write_idx = offset + dense_idx
+                
+                if node.is_leaf_node():
+                    v_1d[write_idx] = float(np.atleast_1d(node.value)[0])
+                else:
+                    f_1d[write_idx] = int(node.idx_split_variable)
+                    
+                    # THE FIX: Pull the actual split threshold!
+                    t_1d[write_idx] = float(node.value)
+                    
+                    l_1d[write_idx] = idx_map.get(2 * heap_idx + 1, -1)
+                    r_1d[write_idx] = idx_map.get(2 * heap_idx + 2, -1)
+    # --- PRE-ALLOCATE FLAT 1D ARRAYS ---
+    # f_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+    # l_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+    # r_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+    # t_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
+    # v_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
+    
+    # if not self.tune:
+    #     def extract_trees(obj):
+    #         if hasattr(obj, "tree_structure"): return [obj]
+    #         found = []
+    #         if isinstance(obj, (list, tuple, np.ndarray)):
+    #             for item in obj: found.extend(extract_trees(item))
+    #         return found
+        
+    #     active_forest = getattr(getattr(self, "bart", self), "trees", getattr(self, "all_trees", []))
+    #     true_trees = extract_trees(active_forest)
+        
+    #     if len(true_trees) >= NUM_TREES:
+    #         true_trees = true_trees[-NUM_TREES:]
+            
+    #     for tree_idx, tree in enumerate(true_trees):
+    #         if tree_idx >= NUM_TREES: break
+    #         offset = tree_idx * MAX_NODES
+    #         sorted_nodes = sorted(tree.tree_structure.items())
+    #         idx_map = {heap_idx: dense_idx for dense_idx, (heap_idx, _) in enumerate(sorted_nodes)}
+            
+    #         for dense_idx, (heap_idx, node) in enumerate(sorted_nodes):
+    #             if dense_idx >= MAX_NODES: break
+    #             write_idx = offset + dense_idx
+                
+    #             if node.is_leaf_node():
+    #                 v_1d[write_idx] = float(np.atleast_1d(node.value)[0])
+    #             else:
+    #                 f_1d[write_idx] = int(node.idx_split_variable)
+    #                 t_1d[write_idx] = float(np.atleast_1d(node.value)[0])
+    #                 l_1d[write_idx] = idx_map.get(2 * heap_idx + 1, -1)
+    #                 r_1d[write_idx] = idx_map.get(2 * heap_idx + 2, -1)
+
+    target_stats.update({
+        "flat_f": f_1d, "flat_t": t_1d, "flat_l": l_1d, "flat_r": r_1d, "flat_v": v_1d
+    })
+    return point, stats
+
+pmb.pgbart.PGBART.astep = _patched_astep
+pmb.pgbart.PGBART._is_live_patched = True
+
+import numpy as np
+from numba import njit, prange
+# import scipy as sp
+import xarray as xr
+
+@njit
+def _eval_tree(x_row, f_flat, t_flat, l_flat, r_flat, v_flat, root_idx, max_nodes, is_one_hot):
+    node = root_idx
+    limit = root_idx + max_nodes 
+    num_feats = len(x_row)
+    
+    while True:
+        if node < 0 or node >= len(f_flat): return 0.0 
+        feat = f_flat[node]
+        if feat == -1: return v_flat[node]
+        if feat < 0 or feat >= num_feats: return v_flat[node]
+            
+        # ==========================================
+        # THE FIX: DYNAMIC SPLIT RULES
+        # ==========================================
+        if is_one_hot[feat] == 1:
+            # One-Hot Rule: Strict Equality
+            if x_row[feat] == t_flat[node]:
+                rel_next = l_flat[node]
+            else:
+                rel_next = r_flat[node]
+        else:
+            # Continuous Rule: Standard Inequality
+            if x_row[feat] <= t_flat[node]:
+                rel_next = l_flat[node]
+            else:
+                rel_next = r_flat[node]
+        # ==========================================
+            
+        if rel_next <= 0: return v_flat[node]
+        node = root_idx + rel_next
+        if node >= limit: return v_flat[node]
+
+@njit(parallel=True, fastmath=True)
+def fast_bart_predict(X, F, T, L, R, V, offset, n_trees, max_nodes, is_one_hot):
+    n_total_draws = F.shape[0]
+    n_obs = X.shape[0]
+    preds = np.zeros((n_total_draws, n_obs), dtype=np.float32)
+    
+    for d in prange(n_total_draws):
+        for i in range(n_obs):
+            draw_sum = 0.0
+            for tr in range(n_trees):
+                root_idx = tr * max_nodes
+                draw_sum += _eval_tree(X[i], F[d], T[d], L[d], R[d], V[d], root_idx, max_nodes, is_one_hot)
+            preds[d, i] = draw_sum + offset
+    return preds
+
+# @njit
+# def _predict_single_tree(X_row, F, T, L, R, V):
+#     node = 0
+#     while F[node] != -1:
+#         if X_row[F[node]] <= T[node]:
+#             node = L[node]
+#         else:
+#             node = R[node]
+#     return V[node]
+
+# @njit(parallel=True)
+# def _predict_all_samples(X, F, T, L, R, V, num_samples, num_trees, num_obs):
+#     preds = np.zeros((num_samples, num_obs), dtype=np.float32)
+#     for s in prange(num_samples):
+#         for i in range(num_obs):
+#             tree_sum = 0.0
+#             for m in range(num_trees):
+#                 tree_sum += _predict_single_tree(
+#                     X[i], F[s, m], T[s, m], L[s, m], R[s, m], V[s, m]
+#                 )
+#             preds[s, i] = tree_sum
+#     return preds
+
+# # 1. The Micro-Function: Drops a single row of X down a single tree
+# @njit
+# def _eval_tree(x_row, f_tree, t_tree, l_tree, r_tree, v_tree):
+#     node = 0  # Start at the root node (index 0)
+    
+#     # -1 in the feature matrix means we have hit a terminal leaf node
+#     while f_tree[node] != -1:
+#         feat = f_tree[node]
+        
+#         # PyMC-BART standard split logic
+#         if x_row[feat] <= t_tree[node]:
+#             node = l_tree[node]  # Go Left
+#         else:
+#             node = r_tree[node]  # Go Right
+            
+#     return v_tree[node]  # Return the leaf value
+
+# # 2. The Macro-Function: Parallelizes across all your CPU cores
+# @njit(parallel=True, fastmath=True)
+# def fast_bart_predict(X, F, T, L, R, V, offset):
+#     n_draws, n_trees, n_nodes = F.shape
+#     n_obs = X.shape[0]
+    
+#     # Pre-allocate the output matrix: (draws, observations)
+#     preds = np.zeros((n_draws, n_obs), dtype=np.float32)
+    
+#     # prange instantly distributes the MCMC draws across all available CPU threads
+#     for d in prange(n_draws):
+#         for i in range(n_obs):
+#             draw_sum = 0.0
+#             for tr in range(n_trees):
+#                 draw_sum += _eval_tree(X[i], F[d, tr], T[d, tr], L[d, tr], R[d, tr], V[d, tr])
+            
+#             # BART predictions are the sum of the trees + the model offset
+#             preds[d, i] = draw_sum + offset
+            
+#     return preds
 
 # test
 class BartSurvModel():
@@ -24,6 +290,7 @@ class BartSurvModel():
     Returns:
         _type_: BartSurvModel
     """
+    
     _model_type = "BART_Survival"
     version = "0.1"
     def __init__(
@@ -37,6 +304,7 @@ class BartSurvModel():
             model_config (Dict, optional): model configuration parameters. Defaults to None.
             sampler_config (Dict, optional): model sampling parameters. Defaults to None.
         """
+        print("HI2")
         sampler_config = (self.get_default_sampler_config() if sampler_config is None else sampler_config)
         self.sampler_config = sampler_config
         model_config = self.get_default_model_config() if model_config is None else model_config
@@ -45,68 +313,88 @@ class BartSurvModel():
         self.idata: Optional[az.InferenceData] = None  # idata is generated during fitting
         self.is_fitted_ = False
 
-    # note that this needs to be implemented at the pymc-BART level, otherwise it is untraceable and can lead to unwanted behavior        
-    # deconstructure added to handle the linger processes
-    # def __del__(self): 
-    #     childs = mp.active_children()
-    #     for child in childs:
-    #         child.kill()
-
-
-
     def build_model(
         self, 
         X: np.ndarray, 
         y: np.ndarray,                        
-        weights: np.ndarray,
-        coords: np.ndarray,
-        predictor_names: list,
+        weights: np.ndarray = None,
+        coords: np.ndarray = None,
+        predictor_names: list = None,
         **kwargs
     ): 
-        """Builds the PYMC base model.
-
-        Args:
-            X (np.ndarray): Covariate matrix in long-time form.
-            y (np.ndarray): Event status in long-time form.
-            weights (np.ndarray): Array of weights.
-            coords (np.ndarray): Array of coordinates associated with long-time form.   
-            predictor_names (list): List of names for variables.    
-
-        Returns:
-            _type_: BartSurvModel
-        """
-        # check x,y,weights        
+        """Builds the optimized PYMC base model with flexible weight scaling."""
         self._generate_and_preprocess_model_data(X, y, weights, predictor_names)
-        # Get model Configs
+        
+        # 2. Flexible Weight Routing
+        weight_scaling = self.model_config.get("weight_scaling","ess")
+        w_raw = self.weights.flatten()
+        if weight_scaling == "ess":
+            # Default: Scale to Kish's Effective Sample Size (Safest for Bayesian CIs)
+            sum_w = np.sum(w_raw)
+            sum_w_sq = np.sum(w_raw**2)
+            if sum_w_sq > 0:
+                ess = (sum_w ** 2) / sum_w_sq
+                final_weights = w_raw * (ess / sum_w)
+            else:
+                final_weights = w_raw
+        elif weight_scaling == "mean":
+            # Scale weights so they sum exactly to the number of observations (N_obs)
+            # Useful if the user wants standard Machine Learning loss-weighting
+            mean_w = np.mean(w_raw)
+            final_weights = w_raw / mean_w if mean_w > 0 else w_raw
+        elif weight_scaling == "raw":
+            # Total User Control: Use the exact weights provided, no questions asked.
+            # (Users must ensure their weights don't break the Bayesian information identity)
+            final_weights = w_raw
+        else:
+            raise ValueError(f"Unknown weight_scaling '{weight_scaling}'. Use 'ess', 'mean', or 'raw'.")
+        final_weights = final_weights.reshape(-1, 1)
+
+        # Get Model Configs
         SPLIT_RULES = [eval(rule) for rule in self.model_config.get("split_rules", None)]
         SPLIT_PRIOR = self.model_config.get("split_prior")
         M = self.model_config.get("trees", 20)
+        ALPHA= self.model_config.get("alpha", .95)
+        BETA = self.model_config.get("beta", 2)
+        
 
-        # custom logp
-        def logp_bern(value, mu, w):
-            return w * pm.logp(pm.Bernoulli.dist(mu), value)
-        # extension of the bernoulli, the distribution is used as normal
-        def dist_bern(mu, w, size):
-            return pm.Bernoulli.dist(mu, size=size)
-        # offset
-        self.offset = sp.norm.ppf(np.mean(self.y))
-        # model coords
-        mcoords = {"xvars":self.predictor_names}
+        # Offset
+        eps = 1e-6
+        clipped_mean = np.clip(np.mean(self.y), eps, 1 - eps)
+        self.offset = sp.stats.norm.ppf(clipped_mean)
+        
+        mcoords = {"xvars": self.predictor_names}
 
         with pm.Model(coords=mcoords) as self.model:    
-            self.model.add_coord("p_obs", coords, mutable=True)
-            x_data = pm.MutableData("x_data", self.X, dims=("p_obs", "xvars"))
-            w = pm.MutableData("weights", self.weights)
-            # change names of y_values
-            f = pmb.BART("f", X=x_data, Y=self.y.flatten(), m=M, split_rules = SPLIT_RULES, split_prior = SPLIT_PRIOR)
-            z = pm.Deterministic("z", (f + self.offset))
-            mu = pm.Deterministic("mu", pm.math.invprobit(z), dims=("p_obs"))
-            pm.CustomDist("y_pred", mu, w.flatten(), dist=dist_bern, logp=logp_bern, observed=self.y.flatten(), shape = x_data.shape[0])            
-    
+            self.model.add_coord("p_obs", coords)
+            
+            # Load the dynamically scaled weights into the graph
+            w = pm.Data("weights", final_weights)
+            
+            
+            f = pmb.BART(
+                "f", 
+                X=self.X, 
+                Y=self.y.flatten(), 
+                m=M, 
+                split_rules=SPLIT_RULES, 
+                split_prior=SPLIT_PRIOR,
+                alpha=ALPHA,
+                beta=BETA
+            )
+            
+            z = f + self.offset
+            mu = pm.math.invprobit(z)
+            
+            base_logp = pm.logp(pm.Bernoulli.dist(p=mu), self.y.flatten())
+            pm.Potential("weighted_obs", w.flatten() * base_logp)
+            
+        return self.model
+
     def sample_model(
-        self, 
-        **kwargs
-    ) -> az.InferenceData:
+            self, 
+            **kwargs
+        ) -> az.InferenceData:
         """Initiates training/sampling of the model.
 
         Returns:
@@ -121,6 +409,98 @@ class BartSurvModel():
             idata = pm.sample(**sampler_args)
         idata = self.set_idata_attrs(idata)
         return idata
+
+    # def _extract_and_flatten_trees(self):
+    #     """
+    #     Extracts the trained BART trees from the PyMC model graph and 
+    #     flattens them into C-contiguous NumPy arrays for Numba compilation.
+    #     """
+    #     print("Extracting and flattening BART trees for fast prediction...")
+        
+    #     f_var = self.model["f"]
+    #     all_chains = f_var.owner.op.all_trees 
+        
+    #     flat_features = []
+    #     flat_thresholds = []
+    #     flat_left_idx = []
+    #     flat_right_idx = []
+    #     flat_values = []
+        
+    #     all_draws = [draw for chain in all_chains for draw in chain]
+        
+    #     for draw_trees in all_draws:
+    #         draw_features, draw_thresholds = [], []
+    #         draw_left, draw_right, draw_values = [], [], []
+            
+    #         for tree in draw_trees:
+    #             # In the new API, nodes are in a dictionary.
+    #             # Keys are standard binary heap indices (root=0, left=2i+1, right=2i+2)
+    #             sorted_indices = sorted(tree.tree_structure.keys())
+                
+    #             # Map the sparse heap index to a dense, contiguous array index (0 to N)
+    #             idx_map = {heap_idx: dense_idx for dense_idx, heap_idx in enumerate(sorted_indices)}
+                
+    #             num_nodes = len(sorted_indices)
+    #             t_feat = [-1] * num_nodes
+    #             t_thresh = [0.0] * num_nodes
+    #             t_left = [-1] * num_nodes
+    #             t_right = [-1] * num_nodes
+    #             t_val = [0.0] * num_nodes
+                
+    #             for heap_idx in sorted_indices:
+    #                 dense_idx = idx_map[heap_idx]
+    #                 node = tree.tree_structure[heap_idx]
+                    
+    #                 if node.is_leaf_node():
+    #                     t_feat[dense_idx] = -1
+    #                     # t_val[dense_idx] = node.value
+    #                     t_val[dense_idx] = float(np.atleast_1d(node.value)[0])
+    #                 else:
+    #                     t_feat[dense_idx] = node.idx_split_variable
+    #                     t_thresh[dense_idx] = float(np.atleast_1d(node.value)[0])
+                        
+    #                     # Calculate binary heap children
+    #                     left_heap = 2 * heap_idx + 1
+    #                     right_heap = 2 * heap_idx + 2
+                        
+    #                     # Get their contiguous array index (or -1 if they don't exist)
+    #                     t_left[dense_idx] = idx_map.get(left_heap, -1)
+    #                     t_right[dense_idx] = idx_map.get(right_heap, -1)
+                
+    #             draw_features.append(t_feat)
+    #             draw_thresholds.append(t_thresh)
+    #             draw_left.append(t_left)
+    #             draw_right.append(t_right)
+    #             draw_values.append(t_val)
+                
+    #         flat_features.append(draw_features)
+    #         flat_thresholds.append(draw_thresholds)
+    #         flat_left_idx.append(draw_left)
+    #         flat_right_idx.append(draw_right)
+    #         flat_values.append(draw_values)
+
+    #     # Pad arrays (trees have different depths, NumPy needs uniform matrices)
+    #     max_nodes = max(len(t) for draw in flat_features for t in draw)
+    #     num_draws = len(all_draws)
+    #     num_trees = len(all_draws[0])
+        
+    #     self.F = np.full((num_draws, num_trees, max_nodes), -1, dtype=np.int32)
+    #     self.T = np.full((num_draws, num_trees, max_nodes), 0.0, dtype=np.float32)
+    #     self.L = np.full((num_draws, num_trees, max_nodes), -1, dtype=np.int32)
+    #     self.R = np.full((num_draws, num_trees, max_nodes), -1, dtype=np.int32)
+    #     self.V = np.full((num_draws, num_trees, max_nodes), 0.0, dtype=np.float32)
+        
+    #     for d in range(num_draws):
+    #         for m in range(num_trees):
+    #             n_nodes = len(flat_features[d][m])
+    #             self.F[d, m, :n_nodes] = flat_features[d][m]
+    #             self.T[d, m, :n_nodes] = flat_thresholds[d][m]
+    #             self.L[d, m, :n_nodes] = flat_left_idx[d][m]
+    #             self.R[d, m, :n_nodes] = flat_right_idx[d][m]
+    #             self.V[d, m, :n_nodes] = flat_values[d][m]
+                
+    #     print(f"Successfully extracted {num_draws} draws, {num_trees} trees per draw.")
+    #     print(f"Maximum nodes per tree: {max_nodes}.")
 
     def fit(
         self,
@@ -162,19 +542,64 @@ class BartSurvModel():
         self.all_trees = list(self.model.f.owner.op.all_trees)
         # get x names
 
+        # self._extract_and_flatten_trees() ##### updated
 
-        # create idata of testing data
-        combined_data = np.hstack([self.y, self.weights, self.X])
-        # assert all(combined_data.columns), "All columns must have non-empty names"
+        # create idata of testing data, drop this because no need to extra stores
+        # combined_data = np.hstack([self.y, self.weights, self.X])
+        # # assert all(combined_data.columns), "All columns must have non-empty names"
+
+
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
                 category=UserWarning#,
             )
-            self.idata.add_groups(fit_data=xr.DataArray(combined_data))  # type: ignore
-            self.idata.add_groups(predictor_names = xr.DataArray(self.predictor_names))
-            self.idata.add_groups(offset = xr.DataArray(self.offset))
-        return self.idata  # type: ignore
+
+            self.idata["bart_metadata"] = xr.Dataset({
+                "predictor_names": (("feature",), self.predictor_names),
+                "offset":          ((), self.offset), # Empty tuple means it's a scalar
+                "trees_M":         ((), self.model_config.get("trees", 20))
+            })
+
+            # --- POST PROCESSING EXTRACTION ---
+            # --- POST PROCESSING EXTRACTION ---
+            
+            
+ 
+            
+            self.idata["bart_metadata"] = xr.Dataset({
+                "predictor_names": (("feature",), self.predictor_names),
+                "offset":          ((), self.offset),
+                "trees_M":         ((), self.model_config.get("trees", 20))
+            })
+            
+            raw_F = self.idata.sample_stats["flat_f"].values
+            raw_T = self.idata.sample_stats["flat_t"].values
+            raw_L = self.idata.sample_stats["flat_l"].values
+            raw_R = self.idata.sample_stats["flat_r"].values
+            raw_V = self.idata.sample_stats["flat_v"].values
+
+            n_chains, n_draws, _ = raw_F.shape
+            total_samples = n_chains * n_draws
+            
+            NUM_TREES = 50
+            MAX_NODES = 255
+
+            self.F = raw_F.reshape(total_samples, NUM_TREES, MAX_NODES).astype(np.int16)
+            self.T = raw_T.reshape(total_samples, NUM_TREES, MAX_NODES).astype(np.float32)
+            self.L = raw_L.reshape(total_samples, NUM_TREES, MAX_NODES).astype(np.int16)
+            self.R = raw_R.reshape(total_samples, NUM_TREES, MAX_NODES).astype(np.int16)
+            self.V = raw_V.reshape(total_samples, NUM_TREES, MAX_NODES).astype(np.float32)
+
+            self.idata["bart_trees"] = xr.Dataset({
+                "feature":   (("sample", "tree", "node"), self.F),
+                "threshold": (("sample", "tree", "node"), self.T),
+                "left":      (("sample", "tree", "node"), self.L),
+                "right":     (("sample", "tree", "node"), self.R),
+                "value":     (("sample", "tree", "node"), self.V)
+            })
+            
+            return self.idata
 
     def set_idata_attrs(
         self, 
@@ -199,6 +624,248 @@ class BartSurvModel():
         idata.attrs["sampler_config"] = json.dumps(self.sampler_config)
         idata.attrs["model_config"] = json.dumps(self._serializable_model_config)
         return idata
+    
+
+    # def sample_posterior_predictive(self, X_pred, coords, extend_idata=True, **kwargs):
+    #     """
+    #     Fast Numba-based posterior predictive sampling bypassing the PyTensor graph.
+    #     """
+    #     print("Running high-speed Numba BART prediction...")
+        
+    #     if not hasattr(self, "idata") or "bart_trees" not in self.idata:
+    #         raise RuntimeError("Model is not fitted or trees were not flattened.")
+        
+    #     # 1. Extract flattened trees from xarray
+    #     # We reshape the (chain, draw) dimensions into a single flat "sample" dimension 
+    #     # to make iterating easier for Numba.
+    #     trees = self.idata["bart_trees"]
+        
+    #     F = trees["feature"].to_numpy()
+    #     T = trees["threshold"].to_numpy()
+    #     L = trees["left"].to_numpy()
+    #     R = trees["right"].to_numpy()
+    #     V = trees["value"].to_numpy()
+
+    #     num_samples = F.shape[0]
+    #     num_trees = F.shape[1]
+    #     num_obs = X_pred.shape[0]
+        
+    #     # Ensure X_pred is a contiguous float/int matrix for Numba
+    #     X_pred_np = np.ascontiguousarray(X_pred, dtype=np.float32)
+        
+    #     # 2. Run the Numba Engine
+    #     # This returns the latent variable (z) matrix: (num_samples, num_obs)
+    #     z_pred = _predict_all_samples(X_pred_np, F, T, L, R, V, num_samples, num_trees, num_obs)
+        
+    #     # 3. Apply Offset and Inverse Probit Link
+    #     # Add the offset we saved earlier
+    #     offset = float(self.idata["bart_metadata"]["offset"].values)
+    #     z_pred += offset
+        
+    #     # Convert latent Z to survival probability Mu using normal CDF
+    #     mu_pred = sp.norm.cdf(z_pred)
+        
+    #     # 4. Reshape back to PyMC standard (chain, draw, observation)
+    #     n_chains = self.idata.posterior.sizes["chain"]
+    #     n_draws = self.idata.posterior.sizes["draw"]
+    #     mu_pred_reshaped = mu_pred.reshape((n_chains, n_draws, num_obs))
+        
+    #     # 5. Pack into an xarray dataset just like PyMC would
+    #     post_pred = xr.Dataset(
+    #         {"mu": (("chain", "draw", "p_obs"), mu_pred_reshaped)},
+    #         coords={
+    #             "chain": self.idata.posterior.chain,
+    #             "draw": self.idata.posterior.draw,
+    #             "p_obs": coords
+    #         }
+    #     )
+        
+    #     if extend_idata:
+    #         self.idata["posterior_predictive"] = post_pred
+            
+    #     return post_pred
+
+    def predict_posterior(self, X_pred, coords=None, extend_idata=True, **kwargs):
+        if not hasattr(self, "idata") or "bart_trees" not in self.idata:
+            raise ValueError("Model must be fitted before predicting.")
+
+        # 1. Force exact column alignment
+        if hasattr(X_pred, "columns"):  
+            if hasattr(self, "predictor_names"):
+                X_pred = X_pred[self.predictor_names] 
+            X_np = X_pred.values.astype(np.float32)
+        else:
+            X_np = np.asarray(X_pred, dtype=np.float32)
+
+        # 2. Extract and SANITIZE the saved matrices
+        n_chains = self.idata.posterior.sizes["chain"]
+        n_draws = self.idata.posterior.sizes["draw"]
+        n_total_draws = n_chains * n_draws
+
+        def clean_int(arr_name):
+            arr = self.idata.bart_trees[arr_name].values
+            # If ArviZ saved it as an object array, unpack it into a pure matrix
+            if arr.dtype == object:
+                arr = np.stack(arr.flatten())
+            # Force to float first to handle NaNs, then safely cast to int
+            arr = np.nan_to_num(np.asarray(arr, dtype=np.float32), nan=-1.0)
+            # Reshape securely so the rows are ALWAYS the 1000 total draws
+            return arr.astype(np.int32).reshape(n_total_draws, -1)
+            
+        def clean_int(arr_name):
+            arr = self.idata.bart_trees[arr_name].values
+            if arr.dtype == object: arr = np.stack(arr.flatten())
+            # Force to float32 first to handle NaNs, then cast to int16
+            arr = np.nan_to_num(np.asarray(arr, dtype=np.float32), nan=-1.0)
+            return arr.astype(np.int16).reshape(n_total_draws, -1)
+        
+        def clean_float(arr_name):
+            arr = self.idata.bart_trees[arr_name].values
+            if arr.dtype == object:
+                arr = np.stack(arr.flatten())
+            return np.asarray(arr, dtype=np.float32).reshape(n_total_draws, -1)
+        
+
+        F = clean_int("feature")
+        L = clean_int("left")
+        R = clean_int("right")
+        T = clean_float("threshold")
+        V = clean_float("value")
+        offset = float(self.idata.bart_metadata["offset"].values)
+
+        # Dynamically calculate your trees so you never have to hardcode it!
+        MAX_NODES = 255  # This must match whatever MAX_NODES is in your live patch
+        n_nodes = F.shape[1]
+        n_trees = n_nodes // MAX_NODES
+
+        # add in the onehot
+        is_one_hot = np.zeros(X_np.shape[1], dtype=np.int32)
+        for i, rule in enumerate(self.model_config.get("split_rules")):
+            if "OneHot" in rule:
+                is_one_hot[i]=1
+
+
+        # 3. Execute the C-compiled engine
+        mu_preds_flat = fast_bart_predict(X_np, F, T, L, R, V, offset, n_trees, MAX_NODES, is_one_hot)
+
+
+        # 4. Reshape back to exactly match PyMC's (chain, draw, p_obs) structure
+        n_chains = self.idata.posterior.sizes["chain"]
+        n_draws = self.idata.posterior.sizes["draw"]
+        num_obs = X_np.shape[0]
+        
+        mu_preds_3d = mu_preds_flat.reshape((n_chains, n_draws, num_obs))
+
+        # 5. Apply Probit Link
+        mu_prob = sp.stats.norm.cdf(mu_preds_3d)
+        
+        # 6. Pack into xarray
+        if coords is None:
+            coords = np.arange(num_obs)
+            
+        post_pred = xr.Dataset(
+            {"mu": (("chain", "draw", "p_obs"), mu_prob)},
+            coords={
+                "chain": self.idata.posterior.chain,
+                "draw": self.idata.posterior.draw,
+                "p_obs": coords
+            }
+        )
+        
+        if extend_idata:
+            self.idata["posterior_predictive"] = post_pred
+            
+        return post_pred
+    # def predict_posterior(self, X_pred, coords=None, extend_idata=True, **kwargs):
+    #     if not hasattr(self, "idata") or "bart_trees" not in self.idata:
+    #         raise ValueError("Model must be fitted before predicting.")
+
+    #     # 1. Force exact column order
+    #     if hasattr(X_pred, "columns"):  
+    #         if hasattr(self, "predictor_names"):
+    #             X_pred = X_pred[self.predictor_names] 
+    #         X_np = X_pred.values.astype(np.float32)
+    #     else:
+    #         X_np = np.asarray(X_pred, dtype=np.float32)
+
+    #     # 2. Extract the saved matrices
+    #     F = self.idata.bart_trees["feature"].values
+    #     T = self.idata.bart_trees["threshold"].values.astype(np.float32)
+    #     L = self.idata.bart_trees["left"].values
+    #     R = self.idata.bart_trees["right"].values
+    #     V = self.idata.bart_trees["value"].values.astype(np.float32)
+    #     offset = float(self.idata.bart_metadata["offset"].values)
+
+    #     # 3. Execute the fixed C-compiled engine (Pass 20 trees, 255 nodes)
+    #     mu_preds = fast_bart_predict(X_np, F, T, L, R, V, offset, 20, 255)
+
+    #     # 4. Apply Probit Link directly to the 3D array
+    #     mu_prob = sp.stats.norm.cdf(mu_preds)
+        
+    #     # 5. Pack into xarray
+    #     if coords is None:
+    #         coords = np.arange(mu_prob.shape[2])
+            
+    #     post_pred = xr.Dataset(
+    #         {"mu": (("chain", "draw", "p_obs"), mu_prob)},
+    #         coords={
+    #             "chain": self.idata.posterior.chain,
+    #             "draw": self.idata.posterior.draw,
+    #             "p_obs": coords
+    #         }
+    #     )
+        
+    #     if extend_idata:
+    #         self.idata["posterior_predictive"] = post_pred
+            
+    #     return post_pred
+    # # def predict_posterior(self, X_pred, coords, extend_idata=True, **kwargs):
+    #     """
+    #     Generate high-speed posterior predictions using compiled Numba trees.
+    #     Returns a numpy array of shape (n_draws, n_observations).
+    #     """
+    #     if not hasattr(self, "idata") or "bart_trees" not in self.idata:
+    #         raise ValueError("Model must be fitted before predicting. No tree matrices found in idata.")
+
+    #     # 1. Format input data for Numba (C-contiguous float32)
+    #     if hasattr(X_pred, "values"):  # Handles Pandas DataFrames safely
+    #         X_np = X_pred.values.astype(np.float32)
+    #     else:
+    #         X_np = np.asarray(X_pred, dtype=np.float32)
+
+    #     # 2. Extract the saved 3D matrices
+    #     F = self.idata.bart_trees["feature"].values
+    #     T = self.idata.bart_trees["threshold"].values
+    #     L = self.idata.bart_trees["left"].values
+    #     R = self.idata.bart_trees["right"].values
+    #     V = self.idata.bart_trees["value"].values
+    #     offset = float(self.idata.bart_metadata["offset"].values)
+
+    #     # 3. Execute the C-compiled engine
+    #     mu_preds = fast_bart_predict(X_np, F, T, L, R, V, offset)
+
+    # # 4. Reshape back to PyMC standard (chain, draw, observation)
+    #     n_chains = self.idata.posterior.sizes["chain"]
+    #     n_draws = self.idata.posterior.sizes["draw"]
+    #     num_obs = mu_preds.shape[1]
+    #     mu_pred_reshaped = sp.norm.cdf(mu_preds.reshape((n_chains, n_draws, num_obs)))
+        
+    #     # 5. Pack into an xarray dataset just like PyMC would
+    #     post_pred = xr.Dataset(
+    #         {"mu": (("chain", "draw", "p_obs"), mu_pred_reshaped)},
+    #         coords={
+    #             "chain": self.idata.posterior.chain,
+    #             "draw": self.idata.posterior.draw,
+    #             "p_obs": coords
+    #         }
+    #     )
+        
+    #     if extend_idata:
+    #         self.idata["posterior_predictive"] = post_pred
+            
+    #     return post_pred
+
+
 
     def sample_posterior_predictive(
         self, 
