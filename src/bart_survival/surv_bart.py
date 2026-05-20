@@ -20,111 +20,112 @@ from numba import njit, prange
 import copy
 import os
 import copy
+from .core.astep import FastSurvPGBART
 
-def patch_pymc_bart(num_trees=50, max_nodes=255):
-    # ==========================================
-    # 1. THE VAULT (Prevents Infinite Recursion)
-    # ==========================================
-    # We capture the TRUE native method exactly once and permanently lock it.
-    if not hasattr(pmb.pgbart.PGBART, "_true_native_astep"):
-        pmb.pgbart.PGBART._true_native_astep = pmb.pgbart.PGBART.astep
+# def patch_pymc_bart(num_trees=50, max_nodes=255):
+#     # ==========================================
+#     # 1. THE VAULT (Prevents Infinite Recursion)
+#     # ==========================================
+#     # We capture the TRUE native method exactly once and permanently lock it.
+#     if not hasattr(pmb.pgbart.PGBART, "_true_native_astep"):
+#         pmb.pgbart.PGBART._true_native_astep = pmb.pgbart.PGBART.astep
 
-    print(f"Applying 1D-Flattened Patch (Trees: {num_trees}, Max Nodes: {max_nodes})...")
+#     print(f"Applying 1D-Flattened Patch (Trees: {num_trees}, Max Nodes: {max_nodes})...")
 
-    NUM_TREES = num_trees
-    MAX_NODES = max_nodes
+#     NUM_TREES = num_trees
+#     MAX_NODES = max_nodes
 
-    pmb.pgbart.PGBART.stats_dtypes = [{
-        "variable_inclusion": object, 
-        "tune": bool,                  
-        "flat_f": object,              
-        "flat_t": object,
-        "flat_l": object,
-        "flat_r": object,
-        "flat_v": object,
-    }]
-    pmb.pgbart.PGBART.stats_dtypes_shapes = {}
+#     pmb.pgbart.PGBART.stats_dtypes = [{
+#         "variable_inclusion": object, 
+#         "tune": bool,                  
+#         "flat_f": object,              
+#         "flat_t": object,
+#         "flat_l": object,
+#         "flat_r": object,
+#         "flat_v": object,
+#     }]
+#     pmb.pgbart.PGBART.stats_dtypes_shapes = {}
 
-    def _patched_astep(self, *args, **kwargs):
-        current_pid = os.getpid()
+#     def _patched_astep(self, *args, **kwargs):
+#         current_pid = os.getpid()
         
-        # --- THE FAST-FORWARD ENTROPY BREAKOUT ---
-        if getattr(self, "_entropy_pid", None) != current_pid:
-            np.random.seed(current_pid % 4294967295)
-            if hasattr(self, "rng") and hasattr(self.rng, "random"):
-                burn_count = (current_pid % 100) * 5000 + 1234
-                _ = self.rng.random(burn_count)
-            self._entropy_pid = current_pid
+#         # --- THE FAST-FORWARD ENTROPY BREAKOUT ---
+#         if getattr(self, "_entropy_pid", None) != current_pid:
+#             np.random.seed(current_pid % 4294967295)
+#             if hasattr(self, "rng") and hasattr(self.rng, "random"):
+#                 burn_count = (current_pid % 100) * 5000 + 1234
+#                 _ = self.rng.random(burn_count)
+#             self._entropy_pid = current_pid
 
-        # --- RUN SAMPLING FROM THE VAULT ---
-        # (We strictly call the locked native method, never the dynamic one)
-        res = self._true_native_astep(*args, **kwargs)
+#         # --- RUN SAMPLING FROM THE VAULT ---
+#         # (We strictly call the locked native method, never the dynamic one)
+#         res = self._true_native_astep(*args, **kwargs)
         
-        point, stats = res
-        target_stats = stats[0] if isinstance(stats, list) else stats
+#         point, stats = res
+#         target_stats = stats[0] if isinstance(stats, list) else stats
 
-        # --- PRE-ALLOCATE FLAT 1D ARRAYS ---
-        f_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
-        l_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
-        r_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
-        t_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
-        v_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
+#         # --- PRE-ALLOCATE FLAT 1D ARRAYS ---
+#         f_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+#         l_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+#         r_1d = np.full(NUM_TREES * MAX_NODES, -1, dtype=np.int16)
+#         t_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
+#         v_1d = np.zeros(NUM_TREES * MAX_NODES, dtype=np.float32)
         
-        if not self.tune:
-            def extract_trees(obj):
-                if hasattr(obj, "tree_structure"): return [obj]
-                found = []
-                if isinstance(obj, (list, tuple, np.ndarray)):
-                    for item in obj: found.extend(extract_trees(item))
-                return found
+#         if not self.tune:
+#             def extract_trees(obj):
+#                 if hasattr(obj, "tree_structure"): return [obj]
+#                 found = []
+#                 if isinstance(obj, (list, tuple, np.ndarray)):
+#                     for item in obj: found.extend(extract_trees(item))
+#                 return found
             
-            active_forest = getattr(getattr(self, "bart", self), "trees", getattr(self, "all_trees", []))
-            true_trees = extract_trees(active_forest)
+#             active_forest = getattr(getattr(self, "bart", self), "trees", getattr(self, "all_trees", []))
+#             true_trees = extract_trees(active_forest)
             
-            if len(true_trees) >= NUM_TREES:
-                true_trees = true_trees[-NUM_TREES:]
+#             if len(true_trees) >= NUM_TREES:
+#                 true_trees = true_trees[-NUM_TREES:]
                 
-            for tree_idx, tree in enumerate(true_trees):
-                if tree_idx >= NUM_TREES: break
-                offset = tree_idx * MAX_NODES
-                sorted_nodes = sorted(tree.tree_structure.items())
-                idx_map = {heap_idx: dense_idx for dense_idx, (heap_idx, _) in enumerate(sorted_nodes)}
+#             for tree_idx, tree in enumerate(true_trees):
+#                 if tree_idx >= NUM_TREES: break
+#                 offset = tree_idx * MAX_NODES
+#                 sorted_nodes = sorted(tree.tree_structure.items())
+#                 idx_map = {heap_idx: dense_idx for dense_idx, (heap_idx, _) in enumerate(sorted_nodes)}
                 
-                for dense_idx, (heap_idx, node) in enumerate(sorted_nodes):
-                    if dense_idx >= MAX_NODES: break
-                    write_idx = offset + dense_idx
+#                 for dense_idx, (heap_idx, node) in enumerate(sorted_nodes):
+#                     if dense_idx >= MAX_NODES: break
+#                     write_idx = offset + dense_idx
                     
-                    if node.is_leaf_node():
-                        v_1d[write_idx] = float(np.atleast_1d(node.value)[0])
-                    else:
-                        f_1d[write_idx] = int(node.idx_split_variable)
-                        t_1d[write_idx] = float(node.value)
-                        l_1d[write_idx] = idx_map.get(2 * heap_idx + 1, -1)
-                        r_1d[write_idx] = idx_map.get(2 * heap_idx + 2, -1)
+#                     if node.is_leaf_node():
+#                         v_1d[write_idx] = float(np.atleast_1d(node.value)[0])
+#                     else:
+#                         f_1d[write_idx] = int(node.idx_split_variable)
+#                         t_1d[write_idx] = float(node.value)
+#                         l_1d[write_idx] = idx_map.get(2 * heap_idx + 1, -1)
+#                         r_1d[write_idx] = idx_map.get(2 * heap_idx + 2, -1)
                         
-        target_stats.update({
-            "flat_f": f_1d, "flat_t": t_1d, "flat_l": l_1d, "flat_r": r_1d, "flat_v": v_1d
-        })
+#         target_stats.update({
+#             "flat_f": f_1d, "flat_t": t_1d, "flat_l": l_1d, "flat_r": r_1d, "flat_v": v_1d
+#         })
         
-        # ==========================================
-        # THE MULTIPROCESSING LISTPROXY HIJACK
-        # ==========================================
-        if getattr(self, "_hijacked_proxy", False) is False:
-            print(f"\n[DEBUG] BEFORE HIJACK - Core Type: {type(self.all_trees)}")
+#         # ==========================================
+#         # THE MULTIPROCESSING LISTPROXY HIJACK
+#         # ==========================================
+#         if getattr(self, "_hijacked_proxy", False) is False:
+#             print(f"\n[DEBUG] BEFORE HIJACK - Core Type: {type(self.all_trees)}")
 
-            local_nested_list = []
-            for dim_trees in getattr(self, "all_trees", []):
-                local_nested_list.append(list(dim_trees))
-            self.all_trees = local_nested_list
-            self._hijacked_proxy = True
-            print(f"[DEBUG] AFTER HIJACK - Core Type: {type(self.all_trees)}\n")
+#             local_nested_list = []
+#             for dim_trees in getattr(self, "all_trees", []):
+#                 local_nested_list.append(list(dim_trees))
+#             self.all_trees = local_nested_list
+#             self._hijacked_proxy = True
+#             print(f"[DEBUG] AFTER HIJACK - Core Type: {type(self.all_trees)}\n")
         
-        print(f"[DEBUG] AFTER HIJACK - Core Type: {type(self.all_trees)}\n")
-        return point, stats
+#         print(f"[DEBUG] AFTER HIJACK - Core Type: {type(self.all_trees)}\n")
+#         return point, stats
 
-    # Safely assign the patched method globally
-    pmb.pgbart.PGBART.astep = _patched_astep
-    pmb.pgbart.PGBART._is_live_patched = True
+#     # Safely assign the patched method globally
+#     pmb.pgbart.PGBART.astep = _patched_astep
+#     pmb.pgbart.PGBART._is_live_patched = True
 
 
 @njit
@@ -302,8 +303,9 @@ class BartSurvModel():
                 "The model hasn't been built yet, call .build_model() first or call .fit() instead."
             )
         with self.model:
+            custom_step = FastSurvPGBART(vars=[bart_trees])
             sampler_args = {**self.sampler_config, **kwargs}
-            idata = pm.sample(**sampler_args)
+            idata = pm.sample(step=custom_step, **sampler_args)
         idata = self.set_idata_attrs(idata)
         return idata
 
