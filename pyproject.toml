@@ -8,14 +8,15 @@ authors = [
     {name = "Jacob Tiegs", email = "tiegsjacob@gmail.com"},
 ]
 description = "Survival analyses with Bayesian Additivie Regression Trees using PyMC-BART as BART backend."
-version = "0.1.1"
+version = "0.2.1"
 readme = "README.md"
 dependencies = [
-    "numpy",
-    "scipy",
-    'pymc; python_version<="5.10.3"',
-    'pymc-bart',
-    "cloudpickle"
+    "numpy>=2.0.2",
+    "scipy>=1.14.1",
+    'pymc>=6.0.0',
+    'pymc-bart>=0.12.0',
+    "cloudpickle",
+    'numba>=0.60.0',
 ]
 
 [project.urls]
