@@ -66,7 +66,7 @@ def test_surv_bart():
     )
 
     post1 = BSM.sample_posterior_predictive(X_pred=post_test["post_x"], coords=post_test["coords"])
-    sv_prob = sb.get_sv_prob(post1)
+    sv_prob = sb.get_sv_prob(post1, post_test["coords"])
     # allow 10% difference
     assert(.1>np.abs((sv_prob["sv"].mean(0)-sv_scale_true["sv_true"]).mean()))
 
@@ -78,7 +78,7 @@ def test_surv_bart():
         x = pdp1[0])
     pdp_post = BSM.sample_posterior_predictive(pdp_tst["post_x"], pdp_tst["coords"])
 
-    sv_prob = sb.get_sv_prob(pdp_post)
+    sv_prob = sb.get_sv_prob(pdp_post, pdp_tst["coords"])
     msk_1 = pdp1[1]["coord"] == 1
     HR = (sv_prob["prob"][:,msk_1,:].mean(1) / sv_prob["prob"][:,~msk_1,:].mean(1)).mean(0)
     HR_QT = np.quantile((sv_prob["prob"][:,msk_1,:].mean(1) / sv_prob["prob"][:,~msk_1,:].mean(1)),[0.025,0.975])
