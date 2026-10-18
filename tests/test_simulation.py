@@ -98,6 +98,34 @@ def test_simulate_survival_3():
 
 
 
+def test_simulate_confounded_survival_data():
+    """Verify synthetic cohort generator properties, support violation structure, and metadata."""
+    df, meta = simulation.simulate_confounded_survival_data(
+        N=200, 
+        treatment_hr=2.0, 
+        censoring_rate=0.25, 
+        include_support_violation=True,
+        n_noise_features=4,
+        seed=123
+    )
+    assert len(df) == 200
+    assert "time" in df.columns and "status" in df.columns
+    assert "inpatient" in df.columns and "los" in df.columns
+    assert all(col in df.columns for col in ["age", "stage", "biomarker"])
+    assert all(f"noise_{k+1}" in df.columns for k in range(4))
+
+    # Test structural support violation: outpatients have los == 0
+    outpat_los = df.loc[df["inpatient"] == 0, "los"]
+    inpat_los = df.loc[df["inpatient"] == 1, "los"]
+    assert (outpat_los == 0.0).all()
+    assert (inpat_los > 0.0).all()
+
+    # Test metadata integrity
+    assert meta["true_hazard_ratio"] == 2.0
+    assert meta["support_violation_column"] == "los"
+    assert len(meta["noise_columns"]) == 4
+
+
 if __name__ == "__main__":
     test_check_inputs()
     test_weibull_survival_components()
@@ -105,5 +133,6 @@ if __name__ == "__main__":
     test_simulate_survival_1()
     test_simulate_survival_2()
     test_simulate_survival_3()
+    test_simulate_confounded_survival_data()
     print("Everything passed")
     

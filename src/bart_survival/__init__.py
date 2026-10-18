@@ -35,6 +35,11 @@ from bart_survival.surv_bart import (
     compute_hazard_ratio,
     pdp_rr_metric,
 )
+from bart_survival.simulation import (
+    simulate_confounded_survival_data,
+    simulate_survival,
+    get_x_matrix,
+)
 from bart_survival.bart_adj import (
     FastSurvMHBART,
     predict_out_of_sample,
@@ -45,6 +50,10 @@ __all__ = [
     "__version__",
     "simulation",
     "surv_bart",
+    # Simulation & Benchmarking
+    "simulate_confounded_survival_data",
+    "simulate_survival",
+    "get_x_matrix",
     # Primary estimator
     "SurvBART",
     "BartSurvModel",

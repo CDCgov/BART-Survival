@@ -68,26 +68,25 @@ class BartSurvModel:
         self, 
         X: np.ndarray, 
         y: np.ndarray,                        
-        weights: np.ndarray,
-        coords: np.ndarray,
-        predictor_names: list,
-        **kwargs
-    ): 
-        """Builds the PYMC base model.
+        weights: Optional[np.ndarray] = None,
+        coords: Optional[np.ndarray] = None,
+        predictor_names: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> pm.Model: 
+        """Builds the PyMC probabilistic model for BART discrete-time survival.
 
         Args:
-            X (np.ndarray): Covariate matrix in long-time form.
-            y (np.ndarray): Event status in long-time form.
-            weights (np.ndarray): Array of weights.
-            coords (np.ndarray): Array of coordinates associated with long-time form.   
-            predictor_names (list): List of names for variables.    
+            X (np.ndarray): Covariate matrix in long-time form [time, x1, x2, ...].
+            y (np.ndarray): Event status in long-time form (0=censored/alive, 1=event).
+            weights (Optional[np.ndarray], optional): Sample observation weights. Defaults to None.
+            coords (Optional[np.ndarray], optional): Subject coordinate index alignment. Defaults to None.
+            predictor_names (Optional[List[str]], optional): Variable names. Defaults to None.
+            **kwargs: Additional model parameters.
 
         Returns:
-            _type_: BartSurvModel
+            pm.Model: The compiled PyMC model.
         """
-        # check x,y,weights        
         self._generate_and_preprocess_model_data(X, y, weights, predictor_names)
-        # Get model Configs
         split_rules = self.model_config.get("split_rules", None)
         if split_rules is None:
             SPLIT_RULES = [pmb.ContinuousSplitRule] * self.X.shape[1]
@@ -96,16 +95,9 @@ class BartSurvModel:
         SPLIT_PRIOR = self.model_config.get("split_prior")
         self.M = self.model_config.get("trees", 20)
 
-        # custom logp
-        def logp_bern(value, mu, w):
-            return w * pm.logp(pm.Bernoulli.dist(mu), value)
-        # extension of the bernoulli, the distribution is used as normal
-        def dist_bern(mu, w, size):
-            return pm.Bernoulli.dist(mu, size=size)
-        # offset
+        # Probit hazard link offset
         self.offset = sp.norm.ppf(np.mean(self.y))
-        # model coords
-        mcoords = {"xvars":self.predictor_names}
+        mcoords = {"xvars": self.predictor_names}
         k = self.sampler_config.get("k", 2)
         update_fraction = self.sampler_config.get("update_fraction", .1)
         min_node_size = self.sampler_config.get("min_node_size", 5)
@@ -183,28 +175,30 @@ class BartSurvModel:
 
     def fit(
         self,
-        y: np.ndarray, #only event outcome
-        X: np.ndarray, #time+covariate expanded
-        weights: np.ndarray=None, #long form weights
-        coords: np.ndarray=None,
+        y: np.ndarray,
+        X: np.ndarray,
+        weights: Optional[np.ndarray] = None,
+        coords: Optional[np.ndarray] = None,
         progressbar: bool = True,
-        predictor_names: List[str] = None,
-        random_seed: RandomState = None,
+        predictor_names: Optional[List[str]] = None,
+        random_seed: Optional[Union[int, RandomState]] = None,
         **kwargs: Any,
     ) -> az.InferenceData:
-        """Call to build and train the data.
+        """Fit the BART survival model using MCMC sampling.
 
         Args:
-            y (np.ndarray): Event status in long-time form.
-            X (np.ndarray): Covariate matrix in long-time form.
-            weights (np.ndarray): Weights associated with each observation.
-            coords (np.ndarray): Coordinates associated with long-time form. 
-            progressbar (bool, optional): Displays training progress. Defaults to True.
-            predictor_names (List[str], optional): Names of covariates in X matrix. Defaults to None.
-            random_seed (RandomState, optional): Seed. Defaults to None.
+            y (np.ndarray): Binary event indicator in long-time pooled format (1=event, 0=censored/alive).
+            X (np.ndarray): Covariate matrix in long-time format where column 0 is discrete time,
+                followed by baseline covariates [time, x1, x2, ...].
+            weights (Optional[np.ndarray], optional): Sample observation weights (e.g. for case-cohort designs). Defaults to None.
+            coords (Optional[np.ndarray], optional): Subject coordinate index alignment for observations. Defaults to None.
+            progressbar (bool, optional): Whether to display MCMC progress bar. Defaults to True.
+            predictor_names (Optional[List[str]], optional): Names of features in X matrix. Defaults to None.
+            random_seed (Optional[Union[int, RandomState]], optional): Random seed for reproducibility. Defaults to None.
+            **kwargs: Additional sampling configuration overrides (e.g. draws, tune, cores, chains).
 
         Returns:
-            az.InferenceData: _description_
+            az.InferenceData: Posterior inference data object containing sampled trees and chain statistics.
         """
         # build model
         self.build_model(X, y, weights, coords, predictor_names)
@@ -251,20 +245,21 @@ class BartSurvModel:
 
     def sample_posterior_predictive(
         self, 
-        X_pred:np.ndarray, 
-        coords:np.ndarray, 
-        extend_idata:bool=False, 
-        **kwargs
-    )->xr.Dataset :
-        """Derives posterior predictions on updated datasets.
+        X_pred: np.ndarray, 
+        coords: Optional[np.ndarray] = None, 
+        extend_idata: bool = False, 
+        **kwargs: Any
+    ) -> np.ndarray:
+        """Derives posterior predictive hazard probabilities on new covariates.
 
         Args:
-            X_pred (np.ndarray): Covariate matrix in long-time format.
-            coords (np.ndarray): Coordinates associated with long-time format.
-            extend_idata (bool, optional): Adds results to the existing idata object. Defaults to False.
+            X_pred (np.ndarray): Covariate matrix in long-time format [time, x1, x2, ...].
+            coords (Optional[np.ndarray], optional): Coordinates associated with subject indices. Defaults to None.
+            extend_idata (bool, optional): Legacy compatibility flag. Defaults to False.
+            **kwargs: Additional keyword arguments.
         
         Returns:
-            xr.Dataset: Dataset containing the predicted outputs from the model and covariate matrix.
+            np.ndarray: Array of shape (n_draws, n_obs) containing predicted hazard probabilities.
         """ 
         if not self.is_fitted_:
             raise RuntimeError("Model is not fitted in this instance. Either refit or predict with bart_predict")
@@ -288,6 +283,24 @@ class BartSurvModel:
         eff_thin = 1 if thin_idata else thin
         preds = predict_out_of_sample(self.idata, X_pred, offset, m_trees=self.M, thin=eff_thin)
         return preds
+
+    def predict(
+        self, 
+        X_pred: np.ndarray, 
+        coords: Optional[np.ndarray] = None, 
+        **kwargs: Any
+    ) -> np.ndarray:
+        """Alias for sample_posterior_predictive following scikit-learn convention.
+
+        Args:
+            X_pred (np.ndarray): Covariate matrix in long-time format [time, x1, x2, ...].
+            coords (Optional[np.ndarray], optional): Coordinates associated with subject indices. Defaults to None.
+            **kwargs: Additional prediction keyword options.
+
+        Returns:
+            np.ndarray: Array of shape (n_draws, n_obs) containing predicted hazard probabilities.
+        """
+        return self.sample_posterior_predictive(X_pred=X_pred, coords=coords, **kwargs)
     
     def bart_predict(
         self, 
@@ -446,8 +459,19 @@ class BartSurvModel:
         return model_config
 
     @staticmethod
-    def get_default_model_config() -> Dict:
-        raise RuntimeError("NO DEFAULT MODEL CONFIGS, MUST SPECIFY")
+    def get_default_model_config() -> Dict[str, Any]:
+        """Default model prior and tree ensemble configuration.
+
+        Returns:
+            Dict[str, Any]: Default configuration dict with 50 trees, alpha=0.95, beta=2.0.
+        """
+        return {
+            "trees": 50,
+            "alpha": 0.95,
+            "beta": 2.0,
+            "split_rules": None,
+            "split_prior": None,
+        }
 
     @staticmethod
     def get_default_sampler_config() -> Dict:
@@ -532,30 +556,36 @@ class BartSurvModel:
         return hasher.hexdigest()[:16]
 
 def get_surv_pre_train( 
-    y_time:np.ndarray,
-    y_status:np.ndarray,
-    x:np.ndarray, 
-    weight:Optional[np.ndarray] = None,
-    time_scale = None 
-)-> Dict:
-    """Generates long-time formatted event status and covariate matrix.
+    y_time: np.ndarray,
+    y_status: np.ndarray,
+    x: np.ndarray, 
+    weight: Optional[np.ndarray] = None,
+    time_scale: Optional[float] = None 
+) -> Dict[str, np.ndarray]:
+    """Generates pooled cross-sectional long-format dataset for discrete-time survival training.
 
-    The SurvBartModel operates using a discrete time format. This means each observation is represented by a series of observations for each time point up to the event time. 
+    Transforms right-censored time-to-event outcomes into person-time binary event observations.
+    Each individual contributes records for discrete intervals $t = 1, 2, \\dots, T_i$.
 
     Args:
-        y_time (np.ndarray): Event time
-        y_status (nd.array): Event status indicator (1 if event occurs, 0 if censored)
-        x (np.ndarray): Covariate matrix.
-        weight (Optional[np.ndarray], optional): Weights associated with each observation. If non provided, then each observation will have weights of 1. Defaults to None.
-        time_scale (Optional[int]): time scaleing factor
+        y_time (np.ndarray): Array of observed follow-up times.
+        y_status (np.ndarray): Binary event indicator (1 if event occurred, 0 if right-censored).
+        x (np.ndarray): Baseline covariate matrix of shape (n_individuals, n_features).
+        weight (Optional[np.ndarray], optional): Observation weights (e.g. for case-cohort designs). Defaults to 1.0.
+        time_scale (Optional[float], optional): Time discretization scale (e.g. 5 for 5-day intervals). Defaults to None.
+
     Returns:
-        Dict: Dictionary containg all of the training data including an event status array, covariate matrix, weights and coordinates associated with the long-time format.
+        Dict[str, np.ndarray]:
+            - 'y': Binary event indicator array of shape (n_person_time, 1).
+            - 'x': Long-format covariate matrix where column 0 is discrete time, followed by covariates.
+            - 'w': Observation weights aligned with person-time rows.
+            - 'coord': Individual identifier integer array linking person-time rows to subjects.
     """
     if weight is None:
         weight = np.ones(y_time.shape[0])
 
     if time_scale is not None:
-        yt = np.ceil(y_time/time_scale).flatten()
+        yt = np.ceil(y_time / time_scale).flatten()
     else:
         yt = y_time.flatten()
     d_sk = np.array(y_status, dtype="int").flatten()
@@ -571,49 +601,52 @@ def get_surv_pre_train(
         d_wide[t_wide[:, i] > yt, i] = 2
     
     # time
-    t_wide = t_wide.reshape(t_wide.shape[0]*t_wide.shape[1],1)
+    t_wide = t_wide.reshape(t_wide.shape[0] * t_wide.shape[1], 1)
     t_wide = (t_wide[t_wide != max_t + 1]) # drop extra times
-    t_wide = t_wide.reshape(t_wide.shape[0],1)
+    t_wide = t_wide.reshape(t_wide.shape[0], 1)
 
-    d_wide = d_wide.reshape(d_wide.shape[0]*d_wide.shape[1],1)
+    d_wide = d_wide.reshape(d_wide.shape[0] * d_wide.shape[1], 1)
     trn_y = (d_wide[d_wide != 2])
-    trn_y = trn_y.reshape(trn_y.shape[0],1)
+    trn_y = trn_y.reshape(trn_y.shape[0], 1)
     
     # x and delta expansion
-    tx = np.repeat(x, t_inv+1, axis=0)
+    tx = np.repeat(x, t_inv + 1, axis=0)
     trn_x = np.hstack([t_wide, tx])
 
     # weight expansion
-    weight_long = np.repeat(weight, t_inv+1)
-    weight_long = weight_long.reshape(weight_long.shape[0],1)
+    weight_long = np.repeat(weight, t_inv + 1)
+    weight_long = weight_long.reshape(weight_long.shape[0], 1)
 
     # get coords
-    coords = np.repeat(np.arange(0,x.shape[0]), t_inv+1)
+    coords = np.repeat(np.arange(0, x.shape[0]), t_inv + 1)
     return {
-            "y":trn_y, 
-            "x":trn_x, 
-            "w":weight_long, 
-            "coord":coords
-        }
+        "y": trn_y, 
+        "x": trn_x, 
+        "w": weight_long, 
+        "coord": coords
+    }
 
 
 def get_posterior_test(
     y_time: np.ndarray,
     y_status: np.ndarray,
-    x:np.ndarray,
-    time_scale = None
-)->Dict:
-    """Generates long-time format for posterior distribution testing.
-    
-    To analyze the posterior distribution, posterior predictive estimates need to be generated. Similar to the training data, the data for posterior predictions must also be in a long-time format.
+    x: np.ndarray,
+    time_scale: Optional[float] = None
+) -> Dict[str, np.ndarray]:
+    """Generates evaluation grid in long-time format for out-of-sample posterior predictions.
+
+    Constructs counterfactual cross-product of discrete evaluation times and subject covariates.
 
     Args:
-        y_time (np.ndarray): Event time
-        y_status (nd.array): Event status indicator (1 if event occurs, 0 if censored)
-        x_test (np.ndarray): Covariate matrix.
-        time_scale (np.ndarray): Time Scaling factor
+        y_time (np.ndarray): Follow-up times defining the discrete time evaluation grid.
+        y_status (np.ndarray): Event indicators (used for historical reference).
+        x (np.ndarray): Baseline covariate matrix to evaluate.
+        time_scale (Optional[float], optional): Time discretization scale. Defaults to None.
+
     Returns:
-        Dict: Covariate matrix in long-time format and associated coordinates for the long-time format.
+        Dict[str, np.ndarray]:
+            - 'post_x': Evaluated covariate matrix with time in column 0.
+            - 'coords': Subject coordinate identifier array.
     """
     if time_scale is not None:
         y_time = np.ceil(y_time/time_scale)
@@ -671,15 +704,16 @@ def get_causal_pdp(
             vals_1 = x.loc[a == values[1], col].values
             if len(vals_0) == 0 or len(vals_1) == 0:
                 continue
-            min_0, max_0 = np.min(vals_0), np.max(vals_0)
-            min_1, max_1 = np.min(vals_1), np.max(vals_1)
-            mass_0 = np.mean(vals_0 == 0)
-            mass_1 = np.mean(vals_1 == 0)
+            min_0, max_0 = float(np.min(vals_0)), float(np.max(vals_0))
+            min_1, max_1 = float(np.min(vals_1)), float(np.max(vals_1))
+            mass_0 = float(np.mean(vals_0 == 0.0))
+            mass_1 = float(np.mean(vals_1 == 0.0))
             
-            range_violation = (min_1 < min_0) or (max_1 > max_0) or (min_0 < min_1) or (max_0 > max_1)
-            mass_violation = (mass_0 > 0.5 and mass_1 == 0) or (mass_1 > 0.5 and mass_0 == 0)
+            mass_violation = (mass_0 >= 0.5 and mass_1 < 0.1) or (mass_1 >= 0.5 and mass_0 < 0.1)
+            degenerate_violation = (min_0 == max_0 and min_1 != max_1) or (min_1 == max_1 and min_0 != max_0)
+            non_overlap = (max_0 < min_1) or (max_1 < min_0)
             
-            if range_violation or mass_violation:
+            if mass_violation or degenerate_violation or non_overlap:
                 dependent_features.append(col)
                 warnings.warn(
                     f"[Causal Audit] Covariate '{col}' violates conditional support with primary exposure '{col_name}'. "
@@ -786,24 +820,31 @@ def get_pdp(
 
 
 def get_sv_prob(
-    post: Union[xr.DataArray, xr.Dataset],
-    coords
-)->Dict:
-    """Generates the Survival Probability estimates for time points.
+    post: Union[np.ndarray, xr.DataArray, xr.Dataset],
+    coords: np.ndarray
+) -> Dict[str, np.ndarray]:
+    """Generates discrete-time hazard and cumulative survival probability estimates.
+
+    Computes S(t) = \\prod_{s=1}^t (1 - h(s)) across all posterior draws and subjects.
 
     Args:
-        post (Union[xr.DataArray, xr.Dataset]): Posterior output.
+        post (Union[np.ndarray, xr.DataArray, xr.Dataset]): Posterior predictive hazard draws.
+        coords (np.ndarray): Subject coordinate indices to reshape predictions per subject and time.
 
     Returns:
-        Dict: Risk Probability (Hazard) and Survival Probability for each draw, observation and time.
+        Dict[str, np.ndarray]:
+            - 'prob': Hazard probability array of shape (n_draws, n_subjects, n_time_points).
+            - 'sv': Cumulative survival probability array of shape (n_draws, n_subjects, n_time_points).
     """
-    n,k = np.unique(coords, return_counts=True)
+    n, k = np.unique(coords, return_counts=True)
     
     if "Dataset" in str(post):
         prob = post.mu.values.reshape(-1, n.shape[0], k[0])
+    elif hasattr(post, "values"):
+        prob = post.values.reshape(-1, n.shape[0], k[0])
     else:
         prob = post.reshape(-1, n.shape[0], k[0])
-    sv = np.cumprod(1-prob, 2)
+    sv = np.cumprod(1.0 - prob, axis=2)
     return {
         "prob": prob, 
         "sv": sv
@@ -815,19 +856,18 @@ def get_sv_mean_quant(
     msk: np.ndarray,
     draws: bool = True, 
     qntile: List[float] = [0.025, 0.975]
-)->Dict:
-    """Generates mean and quantile estimates of Survival Probabilties.
+) -> Dict[str, np.ndarray]:
+    """Generates mean and quantile estimates of Survival Probabilities.
 
     Args:
-        sv (np.ndarray): Survival probabilties.
-        msk (np.ndarray): Mask for selecting values to average (class of a covariate).
-        draws (bool, optional): If true, will average over the draws of the posterior, as well as masked values. Defaults to True.
-        qntile (List[float], optional): Quantiles to average over. Defaults to [0.025, 0.975].
+        sv (np.ndarray): Survival probabilities of shape (n_draws, n_obs, n_times).
+        msk (np.ndarray): Boolean mask selecting subpopulation of interest.
+        draws (bool, optional): If True, aggregates across posterior draws. Defaults to True.
+        qntile (List[float], optional): Credible interval quantiles. Defaults to [0.025, 0.975].
 
     Returns:
-        Dict: Mask True mean, Mask True quantiles, Mask False mean, Mask False quantiles.
+        Dict[str, np.ndarray]: Mean and quantile curves for masked and unmasked groups.
     """
-    # binary mask means and quantiles
     sv_mt = sv[:, msk, :]
     sv_mt_m = sv_mt.mean(axis=1) # mean per draw
     if draws:
@@ -849,47 +889,55 @@ def get_sv_mean_quant(
 
 
 def pdp_diff_metric(
-    pdp_val: Dict, 
-    idx: np.ndarray, 
+    pdp_val: Dict[str, np.ndarray], 
+    idx: int, 
     qntile: List[float] = [0.025, 0.975]
-)->Dict:
-    """Generate estimate of marginal difference from PDP posterior.
+) -> Dict[str, np.ndarray]:
+    """Generates posterior estimate of marginal survival difference between counterfactual groups.
 
     Args:
-        pdp_val (Dict): Posterior of PDP predictions.
-        idx (np.ndarray): Index of PDP sets.
-        qntile (List[float], optional): Quantile values for Credible Interval. Defaults to [0.025, 0.975].
+        pdp_val (Dict[str, np.ndarray]): Posterior output dictionary containing 'sv'.
+        idx (int): Split index demarcating counterfactual groups in stacked PDP matrix.
+        qntile (List[float], optional): Quantiles for credible interval. Defaults to [0.025, 0.975].
 
     Returns:
-        Dict: Survival Probability Difference Mean, Survival Probability Difference Quantiles.
+        Dict[str, np.ndarray]:
+            - 'diff_m': Posterior mean survival difference curve across time points.
+            - 'diff_q': Posterior credible interval quantiles of the difference curve.
     """
-    diff = (pdp_val["sv"][:, :idx, :] - pdp_val["sv"][:, idx:, :]).mean(1) 
-    d_m = diff.mean(0)
+    diff = (pdp_val["sv"][:, :idx, :] - pdp_val["sv"][:, idx:, :]).mean(axis=1) 
+    d_m = diff.mean(axis=0)
     d_q = np.quantile(diff, qntile, axis=0)
-    return {"diff_m": np.round(d_m, 3),
-            "diff_q": np.round(d_q, 3)}
+    return {
+        "diff_m": np.round(d_m, 3),
+        "diff_q": np.round(d_q, 3)
+    }
 
 
 def pdp_rr_metric(
-    pdp_val: Dict, 
-    idx: np.ndarray, 
-    qntile: list = [0.025, 0.975]
-)->Dict:
-    """Generates a Risk Ratio (Hazard Ratio) from pdp values.
+    pdp_val: Dict[str, np.ndarray], 
+    idx: int, 
+    qntile: List[float] = [0.025, 0.975]
+) -> Dict[str, np.ndarray]:
+    """Generates posterior Hazard Ratio / Risk Ratio between counterfactual intervention groups.
 
     Args:
-        pdp_val (Dict): Posterior of PDP predictions.
-        idx (np.ndarray): Index of PDP sets.
-        qntile (list, optional): Quantile values for Credible Interval. Defaults to [0.025, 0.975].
+        pdp_val (Dict[str, np.ndarray]): Posterior output dictionary containing 'prob'.
+        idx (int): Split index demarcating counterfactual groups in stacked PDP matrix.
+        qntile (List[float], optional): Quantiles for credible interval. Defaults to [0.025, 0.975].
 
     Returns:
-        Dict: Risk Ratio Mean, Risk Ratio Quantiles.
+        Dict[str, np.ndarray]:
+            - 'rr_m': Posterior mean hazard ratio curve across time points.
+            - 'rr_q': Posterior credible interval quantiles of the hazard ratio curve.
     """
-    r = (pdp_val["prob"][:, idx:, :] / pdp_val["prob"][:, :idx, :]).mean(1) 
-    r_m = r.mean(0)
+    r = (pdp_val["prob"][:, idx:, :] / pdp_val["prob"][:, :idx, :]).mean(axis=1) 
+    r_m = r.mean(axis=0)
     r_q = np.quantile(r, qntile, axis=0)
-    return {"rr_m": np.round(r_m, 3), 
-            "rr_q": np.round(r_q, 3)}
+    return {
+        "rr_m": np.round(r_m, 3), 
+        "rr_q": np.round(r_q, 3)
+    }
 
 
 # ==========================================
