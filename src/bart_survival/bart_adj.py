@@ -808,7 +808,8 @@ class FastSurvMHBART(PGBART):
                  k=2.0,
                  min_node_size=5,
                  offset=None,
-                 unique_midpoints=False,
+                 split_method="empirical",
+                 unique_midpoints=None,
                  return_estimates=False, *args, **kwargs):
         super().__init__(vars, *args, **kwargs)
         
@@ -817,9 +818,12 @@ class FastSurvMHBART(PGBART):
         self.use_sparsity = bool(use_sparsity)
         self.sparsity_warmup = int(sparsity_warmup)
         self.step_counter = 0
-        self.update_fraction = update_fraction
-        self.min_node_size = min_node_size
-        self.unique_midpoints = bool(unique_midpoints)
+        self.update_fraction = float(update_fraction)
+        self.min_node_size = int(min_node_size)
+        if unique_midpoints is not None:
+            self.unique_midpoints = bool(unique_midpoints)
+        else:
+            self.unique_midpoints = (str(split_method).lower() in ("empirical", "empirical_512", "midpoints", "true", "1"))
         
         if target_x is None or target_y is None or return_estimates == True:
             actual_X = self.X

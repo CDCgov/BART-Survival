@@ -48,12 +48,14 @@ def test_surv_bart():
         "split_rules": SPLIT_RULES
     }
     sampler_dict = {
-                "draws": 100,
-                "tune": 100,
-                "cores": 4,
-                "chains": 4,
-                "compute_convergence_checks": False
-            }
+        "draws": 100,
+        "tune": 100,
+        "cores": 4,
+        "chains": 4,
+        "thin": 1,
+        "thin_idata": False,
+        "compute_convergence_checks": False
+    }
 
     BSM = sb.BartSurvModel(model_config=model_dict, sampler_config=sampler_dict)
 

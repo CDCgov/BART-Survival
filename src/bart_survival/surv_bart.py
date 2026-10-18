@@ -37,32 +37,181 @@ from .bart_adj import FastSurvMHBART, predict_out_of_sample
 class BartSurvModel:
     """Bayesian Additive Regression Trees (BART) Survival Model (SurvBART).
 
-    Implements discrete-time probit hazard modeling using sum-of-trees ensemble.
-    Compatible with scikit-survival style data formats and standard Bayesian workflows.
+    Implements discrete-time probit hazard modeling using an ensemble of sum-of-trees.
+    Supports warm-started Dirichlet sparsity selection (DART), empirical unique midpoint
+    cutpoints (512 resolution), MCMC thinning, and support-audited Causal G-Computation.
     """
     _model_type = "BART_Survival"
     version = "0.2"
 
     def __init__(
         self,
-        model_config: Optional[Dict] = None, 
-        sampler_config: Optional[Dict] = None
+        trees: int = 50,
+        draws: int = 2500,
+        tune: int = 1000,
+        chains: int = 4,
+        cores: Optional[int] = None,
+        thin: int = 10,
+        thin_idata: bool = True,
+        use_sparsity: bool = False,
+        split_method: str = "empirical",
+        max_cutpoints: int = 512,
+        update_fraction: float = 1.0,
+        min_node_size: int = 5,
+        k: float = 2.0,
+        alpha: float = 0.95,
+        beta: float = 2.0,
+        sparsity_warmup: Optional[int] = None,
+        unique_midpoints: Optional[bool] = None,
+        split_rules: Optional[List[Any]] = None,
+        split_prior: Optional[Any] = None,
+        model_config: Optional[Dict[str, Any]] = None, 
+        sampler_config: Optional[Dict[str, Any]] = None
     ):
         """Initialize BartSurvModel / SurvBART.
 
         Args:
-            model_config (Dict, optional): Prior and model configuration (e.g. trees, split_rules, split_prior).
-            sampler_config (Dict, optional): MCMC sampling parameters (e.g. draws, tune, cores, chains, thin).
+            trees (int, optional): Number of trees in the ensemble. Defaults to 50.
+            draws (int, optional): Posterior MCMC draws per chain. Defaults to 2500.
+            tune (int, optional): Warmup / tuning iterations per chain. Defaults to 1000.
+            chains (int, optional): Number of parallel Markov chains. Defaults to 4.
+            cores (Optional[int], optional): Number of CPU processes. Defaults to min(chains, cpu_count).
+            thin (int, optional): Thinning interval for posterior draws. Defaults to 10.
+            thin_idata (bool, optional): If True, retains only thinned samples in idata to save memory. Defaults to True.
+            use_sparsity (bool, optional): Whether to enable DART Dirichlet sparsity. Defaults to False.
+            split_method (str, optional): Strategy for proposing split cutpoints ('empirical' or 'uniform').
+                'empirical' evaluates unique midpoints up to max_cutpoints. Defaults to 'empirical'.
+            max_cutpoints (int, optional): Maximum unique midpoints evaluated per feature. Defaults to 512.
+            update_fraction (float, optional): Fraction of trees proposed per sweep. Defaults to 1.0 (all trees).
+            min_node_size (int, optional): Minimum observation count per leaf node. Defaults to 5.
+            k (float, optional): Leaf prior shrinkage parameter (tau = 3 / (k * sqrt(M))). Defaults to 2.0.
+            alpha (float, optional): Tree depth prior parameter alpha * (1 + depth)^(-beta). Defaults to 0.95.
+            beta (float, optional): Tree depth prior parameter alpha * (1 + depth)^(-beta). Defaults to 2.0.
+            sparsity_warmup (Optional[int], optional): Tuning steps before Dirichlet updates begin.
+            unique_midpoints (Optional[bool], optional): Legacy alias for split_method='empirical'. Defaults to None.
+            split_rules (Optional[List[Any]], optional): PyMC split rules per feature. Defaults to None.
+            split_prior (Optional[Any], optional): Prior on split variables. Defaults to None.
+            model_config (Optional[Dict[str, Any]], optional): Legacy model configuration dictionary.
+            sampler_config (Optional[Dict[str, Any]], optional): Legacy sampler configuration dictionary.
         """
-        sampler_config = self.get_default_sampler_config() if sampler_config is None else sampler_config
-        self.sampler_config = sampler_config
-        model_config = self.get_default_model_config() if model_config is None else model_config
-        self.model_config = model_config  # parameters for priors etc.
-        self.model = None  # Set by build_model
-        self.idata: Optional[az.InferenceData] = None  # idata is generated during fitting
+        model_cfg = self.get_default_model_config()
+        sampler_cfg = self.get_default_sampler_config()
+
+        # Update from keyword arguments
+        model_cfg.update({
+            "trees": trees,
+            "alpha": alpha,
+            "beta": beta,
+            "split_rules": split_rules,
+            "split_prior": split_prior,
+            "split_method": split_method,
+            "max_cutpoints": max_cutpoints,
+        })
+        sampler_cfg.update({
+            "draws": draws,
+            "tune": tune,
+            "chains": chains,
+            "cores": cores,
+            "thin": thin,
+            "thin_idata": thin_idata,
+            "use_sparsity": use_sparsity,
+            "update_fraction": update_fraction,
+            "min_node_size": min_node_size,
+            "k": k,
+            "sparsity_warmup": sparsity_warmup,
+        })
+
+        if unique_midpoints is not None:
+            sampler_cfg["unique_midpoints"] = bool(unique_midpoints)
+        else:
+            sampler_cfg["unique_midpoints"] = (str(split_method).lower() in ("empirical", "empirical_512", "midpoints", "true", "1"))
+
+        # Merge legacy dicts if provided
+        if model_config is not None:
+            model_cfg.update(model_config)
+        if sampler_config is not None:
+            sampler_cfg.update(sampler_config)
+
+        self.model_config = model_cfg
+        self.sampler_config = sampler_cfg
+
+        # Direct property bindings
+        self.trees = self.M = int(self.model_config["trees"])
+        self.draws = int(self.sampler_config["draws"])
+        self.tune = int(self.sampler_config["tune"])
+        self.chains = int(self.sampler_config["chains"])
+        self.cores = self.sampler_config.get("cores", None)
+        self.thin = int(self.sampler_config["thin"])
+        self.thin_idata = bool(self.sampler_config["thin_idata"])
+        self.use_sparsity = bool(self.sampler_config["use_sparsity"])
+        self.update_fraction = float(self.sampler_config["update_fraction"])
+        self.min_node_size = int(self.sampler_config["min_node_size"])
+        self.k = float(self.sampler_config["k"])
+        self.split_method = str(self.model_config.get("split_method", "empirical"))
+        self.max_cutpoints = int(self.model_config.get("max_cutpoints", 512))
+
+        self.model = None
+        self.idata: Optional[az.InferenceData] = None
         self.is_fitted_ = False
+        self.feature_names_: Optional[List[str]] = None
+        self.time_scale_: Optional[float] = None
+        self.training_times_: Optional[np.ndarray] = None
 
+    @classmethod
+    def preset_production(cls, **overrides: Any) -> "BartSurvModel":
+        """Production preset: 50 trees, 2500 draws, 1000 tune, 4 chains, thin 10, update_fraction 1.0, empirical cutpoints."""
+        cfg: Dict[str, Any] = dict(
+            trees=50,
+            draws=2500,
+            tune=1000,
+            chains=4,
+            thin=10,
+            thin_idata=True,
+            update_fraction=1.0,
+            use_sparsity=False,
+            split_method="empirical",
+        )
+        cfg.update(overrides)
+        return cls(**cfg)
 
+    @classmethod
+    def preset_default(cls, **overrides: Any) -> "BartSurvModel":
+        """Default recommended preset (alias for preset_production)."""
+        return cls.preset_production(**overrides)
+
+    @classmethod
+    def preset_fast(cls, **overrides: Any) -> "BartSurvModel":
+        """Fast exploration preset: 20 trees, 500 draws, 250 tune, 2 chains, thin 5, update_fraction 1.0."""
+        cfg: Dict[str, Any] = dict(
+            trees=20,
+            draws=500,
+            tune=250,
+            chains=2,
+            thin=5,
+            thin_idata=True,
+            update_fraction=1.0,
+            use_sparsity=False,
+            split_method="empirical",
+        )
+        cfg.update(overrides)
+        return cls(**cfg)
+
+    @classmethod
+    def preset_high_precision(cls, **overrides: Any) -> "BartSurvModel":
+        """High-precision publication preset: 100 trees, 5000 draws, 2000 tune, 4 chains, thin 10, update_fraction 1.0."""
+        cfg: Dict[str, Any] = dict(
+            trees=100,
+            draws=5000,
+            tune=2000,
+            chains=4,
+            thin=10,
+            thin_idata=True,
+            update_fraction=1.0,
+            use_sparsity=False,
+            split_method="empirical",
+        )
+        cfg.update(overrides)
+        return cls(**cfg)
 
     def build_model(
         self, 
@@ -93,49 +242,57 @@ class BartSurvModel:
         else:
             SPLIT_RULES = [eval(rule) if isinstance(rule, str) else rule for rule in split_rules]
         SPLIT_PRIOR = self.model_config.get("split_prior")
-        self.M = self.model_config.get("trees", 20)
+        self.M = int(self.model_config.get("trees", 50))
 
         # Probit hazard link offset
         self.offset = sp.norm.ppf(np.mean(self.y))
         mcoords = {"xvars": self.predictor_names}
-        k = self.sampler_config.get("k", 2)
-        update_fraction = self.sampler_config.get("update_fraction", .1)
-        min_node_size = self.sampler_config.get("min_node_size", 5)
-        unique_midpoints = self.sampler_config.get("unique_midpoints", False)
-        self.use_sparsity = self.sampler_config.get("use_sparsity", False)
-        tune = self.sampler_config.get("tune", 1000)
-        default_warmup = min(300, max(50, tune // 2))
-        sparsity_warmup = self.sampler_config.get("sparsity_warmup", default_warmup)
+        k = float(self.sampler_config.get("k", 2.0))
+        update_fraction = float(self.sampler_config.get("update_fraction", 1.0))
+        min_node_size = int(self.sampler_config.get("min_node_size", 5))
         
-        # initalize model
-        alpha = self.model_config.get("alpha", 0.95)
-        beta = self.model_config.get("beta", 2.0)
+        unique_midpoints = self.sampler_config.get("unique_midpoints", None)
+        if unique_midpoints is None:
+            split_method = str(self.model_config.get("split_method", "empirical")).lower()
+            unique_midpoints = (split_method in ("empirical", "empirical_512", "midpoints", "true", "1"))
+        else:
+            unique_midpoints = bool(unique_midpoints)
+
+        self.use_sparsity = bool(self.sampler_config.get("use_sparsity", False))
+        tune = int(self.sampler_config.get("tune", 1000))
+        default_warmup = min(300, max(50, tune // 2))
+        sparsity_warmup = self.sampler_config.get("sparsity_warmup")
+        if sparsity_warmup is None:
+            sparsity_warmup = default_warmup
+        else:
+            sparsity_warmup = int(sparsity_warmup)
+        
+        # initialize model
+        alpha = float(self.model_config.get("alpha", 0.95))
+        beta = float(self.model_config.get("beta", 2.0))
         with pm.Model(coords=mcoords) as self.model:    
-            # dummy place-holder - data actually set in the step backdoor
-            trees = pmb.BART("trees", X=np.zeros((1,self.X.shape[1])), Y=np.zeros(1), m=self.M, alpha=alpha, beta=beta)
+            trees = pmb.BART("trees", X=np.zeros((1, self.X.shape[1])), Y=np.zeros(1), m=self.M, alpha=alpha, beta=beta)
             prob = 0.5 * (1.0 + pt.erf(trees / pt.sqrt(2.0)))
             obs = pm.Bernoulli("obs", p=prob, observed=self.y)
         
-            # initiallize the step
             self.custom_step = FastSurvMHBART(
-                    vars=[trees], 
-                    use_sparsity=self.use_sparsity, 
-                    sparsity_warmup=sparsity_warmup,
-                    target_x = self.X,
-                    target_y = self.y,
-                    update_fraction=update_fraction, # number of trees to update
-                    k=k, 
-                    min_node_size=min_node_size,
-                    unique_midpoints=unique_midpoints,
-                    return_estimate = False
-                    )
+                vars=[trees], 
+                use_sparsity=self.use_sparsity, 
+                sparsity_warmup=sparsity_warmup,
+                target_x=self.X,
+                target_y=self.y,
+                update_fraction=update_fraction,
+                k=k, 
+                min_node_size=min_node_size,
+                unique_midpoints=unique_midpoints,
+                return_estimates=False
+            )
             self.offset = self.custom_step.offset
-            
-
+        return self.model
 
     def sample_model(
         self, 
-        **kwargs
+        **kwargs: Any
     ) -> az.InferenceData:
         """Initiates training/sampling of the model.
 
@@ -146,14 +303,17 @@ class BartSurvModel:
             raise RuntimeError(
                 "The model hasn't been built yet, call .build_model() first or call .fit() instead."
             )
-        
 
-        draws = self.sampler_config.get("draws", 2000)
-        tune = self.sampler_config.get("tune", 1000)
-        chains = self.sampler_config.get("chains", 4)
-        cores = self.sampler_config.get("cores", 4)
-        thin = self.sampler_config.get("thin", 1)
-        thin_idata = self.sampler_config.get("thin_idata", False)
+        draws = int(self.sampler_config.get("draws", 2500))
+        tune = int(self.sampler_config.get("tune", 1000))
+        chains = int(self.sampler_config.get("chains", 4))
+        cores = self.sampler_config.get("cores", None)
+        if cores is None:
+            import os
+            cpu_cnt = os.cpu_count() or 4
+            cores = min(chains, max(1, cpu_cnt))
+        thin = int(self.sampler_config.get("thin", 10))
+        thin_idata = bool(self.sampler_config.get("thin_idata", True))
 
         with self.model:
             sampler_args = {**self.sampler_config, **kwargs}
@@ -163,7 +323,7 @@ class BartSurvModel:
                 tune=tune, 
                 chains=chains, 
                 cores=cores,
-                step=self.custom_step,  # If None, PyMC handles it
+                step=self.custom_step,
                 compute_convergence_checks=False,
                 progressbar=pbar,
                 discard_tuned_samples=True
@@ -301,6 +461,249 @@ class BartSurvModel:
             np.ndarray: Array of shape (n_draws, n_obs) containing predicted hazard probabilities.
         """
         return self.sample_posterior_predictive(X_pred=X_pred, coords=coords, **kwargs)
+
+    def fit_survival(
+        self,
+        X: Union[np.ndarray, pd.DataFrame],
+        time: Union[np.ndarray, pd.Series, List[float]],
+        status: Union[np.ndarray, pd.Series, List[int]],
+        time_scale: Optional[float] = None,
+        weights: Optional[np.ndarray] = None,
+        progressbar: bool = True,
+        random_seed: Optional[Union[int, RandomState]] = None,
+        **kwargs: Any
+    ) -> az.InferenceData:
+        """Fits SurvBART directly from baseline tabular covariates and survival outcomes.
+
+        Eliminates manual boilerplate by automatically discretizing follow-up times and
+        expanding tabular data into long-format person-time pooled cross-sections.
+
+        Args:
+            X (Union[np.ndarray, pd.DataFrame]): Baseline covariates.
+            time (Union[np.ndarray, pd.Series, List[float]]): Observed event or censoring times.
+            status (Union[np.ndarray, pd.Series, List[int]]): Binary event indicators (1=event, 0=censored).
+            time_scale (Optional[float], optional): Interval discretization scale factor (e.g. 5 or 30). Defaults to None.
+            weights (Optional[np.ndarray], optional): Sample observation weights. Defaults to None.
+            progressbar (bool, optional): Whether to display MCMC progress bar. Defaults to True.
+            random_seed (Optional[Union[int, RandomState]], optional): Random seed. Defaults to None.
+            **kwargs: Additional sampling keyword overrides.
+
+        Returns:
+            az.InferenceData: Fitted posterior inference data object.
+        """
+        if isinstance(X, pd.DataFrame):
+            self.feature_names_ = list(X.columns)
+            X_mat = X.values
+        else:
+            X_mat = np.asarray(X)
+            self.feature_names_ = [f"x{i}" for i in range(X_mat.shape[1])]
+
+        y_time = np.asarray(time, dtype=np.float64).flatten()
+        y_status = np.asarray(status, dtype=np.int32).flatten()
+
+        self.time_scale_ = time_scale
+        scaled_time = np.ceil(y_time / time_scale) if time_scale is not None else y_time
+        self.training_times_ = np.sort(np.unique(scaled_time))
+
+        trn = format_survival_data(
+            y_time=y_time,
+            y_status=y_status,
+            x=X_mat,
+            weight=weights,
+            time_scale=time_scale
+        )
+
+        names = ["t"] + self.feature_names_
+        return self.fit(
+            y=trn["y"],
+            X=trn["x"],
+            weights=trn["w"],
+            coords=trn["coord"],
+            progressbar=progressbar,
+            predictor_names=names,
+            random_seed=random_seed,
+            **kwargs
+        )
+
+    def predict_survival(
+        self,
+        X_test: Union[np.ndarray, pd.DataFrame],
+        times: Optional[Union[np.ndarray, List[float]]] = None,
+        return_quantiles: bool = False,
+        qntile: List[float] = [0.025, 0.975],
+        **kwargs: Any
+    ) -> Union[np.ndarray, Dict[str, np.ndarray]]:
+        """Calculates out-of-sample cumulative survival curves S(t) for new subjects.
+
+        Args:
+            X_test (Union[np.ndarray, pd.DataFrame]): Baseline covariates for test cohort.
+            times (Optional[Union[np.ndarray, List[float]]], optional): Discrete time evaluation grid.
+                If None, uses unique event times observed during training. Defaults to None.
+            return_quantiles (bool, optional): If True, returns mean and credible interval quantiles.
+                If False, returns full posterior draws of shape (n_draws, n_subjects, n_times). Defaults to False.
+            qntile (List[float], optional): Credible interval quantiles. Defaults to [0.025, 0.975].
+            **kwargs: Additional prediction keyword arguments.
+
+        Returns:
+            Union[np.ndarray, Dict[str, np.ndarray]]: Full survival curve array or summary dict.
+        """
+        if not self.is_fitted_:
+            raise RuntimeError("Model is not fitted yet. Call fit() or fit_survival() first.")
+
+        if isinstance(X_test, pd.DataFrame):
+            X_mat = X_test.values
+        else:
+            X_mat = np.asarray(X_test)
+
+        if times is None:
+            if hasattr(self, "training_times_") and self.training_times_ is not None:
+                eval_times = self.training_times_
+            else:
+                eval_times = self.uniq_times
+            t_scale = None
+        else:
+            eval_times = np.asarray(times)
+            t_scale = getattr(self, "time_scale_", None)
+
+        dummy_status = np.zeros_like(eval_times, dtype=int)
+        post_test = format_prediction_data(
+            y_time=eval_times,
+            y_status=dummy_status,
+            x=X_mat,
+            time_scale=t_scale
+        )
+
+        preds = self.predict(post_test["post_x"], coords=post_test["coords"], **kwargs)
+        sv_dict = compute_survival_curves(preds, post_test["coords"])
+        sv_curves = sv_dict["sv"]  # shape: (n_draws, n_subjects, n_times)
+
+        if return_quantiles:
+            sv_mean = sv_curves.mean(axis=0)
+            sv_q = np.quantile(sv_curves, qntile, axis=0)
+            return {
+                "mean": sv_mean,
+                "lower": sv_q[0],
+                "upper": sv_q[1],
+                "times": eval_times,
+                "prob": sv_dict["prob"],
+                "sv": sv_curves,
+            }
+        return sv_curves
+
+    def feature_importance(self, sort: bool = True) -> pd.Series:
+        """Extracts normalized variable split inclusion proportions from the posterior tree ensemble.
+
+        Args:
+            sort (bool, optional): Whether to sort features in descending order of importance. Defaults to True.
+
+        Returns:
+            pd.Series: Feature importance series indexed by predictor names.
+        """
+        if not self.is_fitted_ or self.idata is None:
+            raise RuntimeError("Model is not fitted yet.")
+
+        var_inc = self.idata.sample_stats["variable_inclusion"].values
+        raw_counts = np.nansum(var_inc, axis=(0, 1))
+        total = raw_counts.sum()
+        if total > 0:
+            importances = raw_counts / total
+        else:
+            importances = np.zeros_like(raw_counts)
+
+        names = self.predictor_names if hasattr(self, "predictor_names") and self.predictor_names is not None else [f"f{i}" for i in range(len(importances))]
+        series = pd.Series(importances, index=names, name="importance")
+        if sort:
+            series = series.sort_values(ascending=False)
+        return series
+
+    def estimate_effect(
+        self,
+        X: Union[np.ndarray, pd.DataFrame],
+        primary_col: Union[str, int] = "inpatient",
+        values: List[Union[int, float]] = [0, 1],
+        times: Optional[Union[np.ndarray, List[float]]] = None,
+        audit_support: bool = True,
+        donor_seed: Optional[int] = 42,
+        **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Estimates counterfactual treatment effects using Support-Audited Causal G-Computation.
+
+        Audits conditional support to detect positivity violations (e.g. deterministic zeros like LOS=0
+        for outpatients). Re-routes dependent features to conditional donor resampling to prevent off-support
+        extrapolation, and derives posterior mean Hazard Ratios and 95% Credible Intervals.
+
+        Args:
+            X (Union[np.ndarray, pd.DataFrame]): Baseline cohort covariates.
+            primary_col (Union[str, int], optional): Primary exposure variable name or column index. Defaults to "inpatient".
+            values (List[Union[int, float]], optional): Counterfactual intervention values. Defaults to [0, 1].
+            times (Optional[Union[np.ndarray, List[float]]], optional): Evaluation time points. Defaults to None.
+            audit_support (bool, optional): Whether to audit and flag support violations. Defaults to True.
+            donor_seed (Optional[int], optional): Random seed for reproducible donor resampling. Defaults to 42.
+            **kwargs: Additional prediction keyword arguments.
+
+        Returns:
+            Dict[str, Any]:
+                - 'hazard_ratio_mean': Posterior mean hazard ratio across evaluation times.
+                - 'hazard_ratio_ci': 95% Credible Interval quantiles [2.5%, 97.5%].
+                - 'difference_mean': Posterior marginal survival difference curve.
+                - 'difference_ci': 95% Credible Interval of the survival difference curve.
+                - 'times': Evaluated discrete time points.
+                - 'flagged_support_violations': List of features identified as violating conditional support.
+                - 'sv_prob': Raw counterfactual survival and hazard draws.
+        """
+        if not self.is_fitted_:
+            raise RuntimeError("Model is not fitted yet.")
+
+        if isinstance(X, np.ndarray):
+            if hasattr(self, "feature_names_") and len(self.feature_names_) == X.shape[1]:
+                X_df = pd.DataFrame(X, columns=self.feature_names_)
+            else:
+                X_df = pd.DataFrame(X)
+        else:
+            X_df = X.copy()
+
+        out_sk, c_idx, flagged = compute_causal_pdp(
+            x=X_df,
+            primary_col=primary_col,
+            values=values,
+            audit_support=audit_support,
+            donor_seed=donor_seed
+        )
+
+        if times is None:
+            if hasattr(self, "training_times_") and self.training_times_ is not None:
+                eval_times = self.training_times_
+            else:
+                eval_times = self.uniq_times
+            t_scale = None
+        else:
+            eval_times = np.asarray(times)
+            t_scale = getattr(self, "time_scale_", None)
+
+        dummy_status = np.zeros_like(eval_times, dtype=int)
+        post_test = format_prediction_data(
+            y_time=eval_times,
+            y_status=dummy_status,
+            x=out_sk,
+            time_scale=t_scale
+        )
+
+        preds = self.predict(post_test["post_x"], coords=post_test["coords"], **kwargs)
+        sv_dict = compute_survival_curves(preds, post_test["coords"])
+
+        n_cohort = len(X_df)
+        hr_res = compute_hazard_ratio(sv_dict, idx=n_cohort)
+        diff_res = compute_pdp_difference(sv_dict, idx=n_cohort)
+
+        return {
+            "hazard_ratio_mean": hr_res["rr_m"],
+            "hazard_ratio_ci": hr_res["rr_q"],
+            "difference_mean": diff_res["diff_m"],
+            "difference_ci": diff_res["diff_q"],
+            "times": eval_times,
+            "flagged_support_violations": flagged,
+            "sv_prob": sv_dict,
+        }
     
     def bart_predict(
         self, 
@@ -460,34 +863,34 @@ class BartSurvModel:
 
     @staticmethod
     def get_default_model_config() -> Dict[str, Any]:
-        """Default model prior and tree ensemble configuration.
-
-        Returns:
-            Dict[str, Any]: Default configuration dict with 50 trees, alpha=0.95, beta=2.0.
-        """
+        """Default model prior and tree ensemble configuration."""
         return {
             "trees": 50,
             "alpha": 0.95,
             "beta": 2.0,
+            "split_method": "empirical",
+            "max_cutpoints": 512,
             "split_rules": None,
             "split_prior": None,
         }
 
     @staticmethod
-    def get_default_sampler_config() -> Dict:
-        """Default Sampler Configuration.
-
-        Returns:
-            Dict: Default Sampler Configuration.
-        """ 
-        sampler_config: Dict = {
-            "draws": 100,
-            "tune": 100,
-            "cores": 2,
-            "chains": 2,
-            "compute_convergence_checks": False
+    def get_default_sampler_config() -> Dict[str, Any]:
+        """Default sampler and MCMC inference configuration."""
+        return {
+            "draws": 2500,
+            "tune": 1000,
+            "chains": 4,
+            "cores": None,
+            "thin": 10,
+            "thin_idata": True,
+            "update_fraction": 1.0,
+            "min_node_size": 5,
+            "k": 2.0,
+            "use_sparsity": False,
+            "unique_midpoints": True,
+            "compute_convergence_checks": False,
         }
-        return sampler_config
 
     @property
     def output_var(self)->str:

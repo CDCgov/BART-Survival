@@ -1,8 +1,6 @@
-"""Unit tests for SurvBART / BartSurvModel estimator, prediction, and serialization.
+"""Unit tests for SurvBART / BartSurvModel estimator, presets, convenience methods, and prediction.
 """
 
-import os
-import tempfile
 import numpy as np
 import pandas as pd
 from bart_survival import (
@@ -15,100 +13,101 @@ from bart_survival import (
 )
 
 
-def test_estimator_initialization():
-    """Verify default and custom configuration initialization."""
+def test_estimator_initialization_and_presets():
+    """Verify default parameters, open constructor, and factory presets."""
     # 1. Default initialization
     model = SurvBART()
-    assert model.model_config["trees"] == 50
-    assert model.model_config["alpha"] == 0.95
-    assert model.sampler_config["draws"] == 100
-    assert model.sampler_config["cores"] == 2
+    assert model.trees == 50
+    assert model.draws == 2500
+    assert model.tune == 1000
+    assert model.chains == 4
+    assert model.thin == 10
+    assert model.thin_idata is True
+    assert model.use_sparsity is False
+    assert model.update_fraction == 1.0
+    assert model.split_method == "empirical"
     assert not model.is_fitted_
 
-    # 2. Custom configuration
-    custom_model = SurvBART(
-        model_config={"trees": 20, "alpha": 0.9},
-        sampler_config={"draws": 50, "cores": 1, "chains": 1}
-    )
-    assert custom_model.model_config["trees"] == 20
-    assert custom_model.sampler_config["draws"] == 50
+    # 2. Preset fast
+    fast_m = SurvBART.preset_fast()
+    assert fast_m.trees == 20
+    assert fast_m.draws == 500
+    assert fast_m.tune == 250
+    assert fast_m.chains == 2
+    assert fast_m.thin == 5
+
+    # 3. Preset high precision
+    hp_m = SurvBART.preset_high_precision()
+    assert hp_m.trees == 100
+    assert hp_m.draws == 5000
+    assert hp_m.tune == 2000
+    assert hp_m.chains == 4
+    assert hp_m.thin == 10
 
 
-def test_estimator_fit_predict_cycle():
-    """Verify SurvBART fitting, out-of-sample prediction, and survival curve generation."""
+def test_estimator_convenience_methods():
+    """Verify fit_survival, predict_survival, feature_importance, and estimate_effect."""
     df, meta = simulate_confounded_survival_data(
-        N=80, 
+        N=70, 
         treatment_hr=2.0, 
         censoring_rate=0.2, 
-        seed=10
+        seed=42
     )
     feature_cols = ["inpatient", "age", "stage"]
-    X = df[feature_cols].values
-    y_time = df["time"].values
-    y_status = df["status"].values
+    X = df[feature_cols]
 
-    # Preprocess training pooled cross-section
-    trn = format_survival_data(
-        y_time=y_time, 
-        y_status=y_status, 
-        x=X, 
-        time_scale=10.0
-    )
-    assert trn["y"].shape[0] == trn["x"].shape[0]
-    assert trn["x"].shape[1] == len(feature_cols) + 1  # time + features
-
-    # Test prediction data grid
-    post_test = format_prediction_data(
-        y_time=y_time, 
-        y_status=y_status, 
-        x=X, 
-        time_scale=10.0
-    )
-    assert post_test["post_x"].shape[1] == len(feature_cols) + 1
-
-    # Fit fast test model
+    # Initialize fast model for test suite speed
     model = SurvBART(
-        model_config={"trees": 15},
-        sampler_config={
-            "draws": 50,
-            "tune": 50,
-            "cores": 2,
-            "chains": 2,
-            "compute_convergence_checks": False,
-        }
+        trees=10,
+        draws=30,
+        tune=30,
+        chains=2,
+        cores=2,
+        thin=1,
+        thin_idata=False,
+        update_fraction=1.0,
+        use_sparsity=False
     )
-    model.fit(
-        y=trn["y"],
-        X=trn["x"],
-        weights=trn["w"],
-        coords=trn["coord"],
+
+    # 1. Test fit_survival (direct end-to-end fit from DataFrame and survival outcomes)
+    model.fit_survival(
+        X=X,
+        time=df["time"],
+        status=df["status"],
+        time_scale=10.0,
         progressbar=False,
-        random_seed=42,
+        random_seed=42
     )
     assert model.is_fitted_
-    assert model.idata is not None
+    assert model.feature_names_ == feature_cols
 
-    # Predict via both .predict() and .sample_posterior_predictive()
-    preds1 = model.predict(X_pred=post_test["post_x"], coords=post_test["coords"])
-    preds2 = model.sample_posterior_predictive(X_pred=post_test["post_x"], coords=post_test["coords"])
+    # 2. Test predict_survival (end-to-end survival curve generation)
+    sv_curves = model.predict_survival(X)
+    assert sv_curves.shape[1] == len(df)
+    # Check monotonicity of S(t)
+    for t_idx in range(sv_curves.shape[2] - 1):
+        assert np.all(sv_curves[:, :, t_idx] >= sv_curves[:, :, t_idx + 1] - 1e-6)
 
-    assert preds1.shape == preds2.shape
-    assert preds1.shape[0] == 100  # 50 draws * 2 chains
-    assert preds1.shape[1] == post_test["post_x"].shape[0]
-    assert np.all((preds1 >= 0.0) & (preds1 <= 1.0))
+    # Test return_quantiles
+    sv_summary = model.predict_survival(X, return_quantiles=True)
+    assert "mean" in sv_summary and "lower" in sv_summary and "upper" in sv_summary
+    assert sv_summary["mean"].shape == (len(df), len(model.training_times_))
 
-    # Convert to survival curves
-    sv_res = compute_survival_curves(preds1, post_test["coords"])
-    assert "prob" in sv_res and "sv" in sv_res
-    # Survival curves must be monotonically non-increasing across time points
-    sv_matrix = sv_res["sv"]  # shape: (n_draws, n_subjects, n_times)
-    assert sv_matrix.shape[1] == len(df)
-    for t_idx in range(sv_matrix.shape[2] - 1):
-        assert np.all(sv_matrix[:, :, t_idx] >= sv_matrix[:, :, t_idx + 1] - 1e-6)
+    # 3. Test feature_importance()
+    feat_imp = model.feature_importance(sort=True)
+    assert isinstance(feat_imp, pd.Series)
+    assert len(feat_imp) == len(feature_cols) + 1  # includes discrete time 't'
+    assert np.isclose(feat_imp.sum(), 1.0)
+
+    # 4. Test estimate_effect()
+    effect = model.estimate_effect(X, primary_col="inpatient", values=[0, 1])
+    assert "hazard_ratio_mean" in effect
+    assert "difference_mean" in effect
+    assert "flagged_support_violations" in effect
+    assert len(effect["hazard_ratio_mean"]) == len(model.training_times_)
 
 
 if __name__ == "__main__":
-    test_estimator_initialization()
-    test_estimator_fit_predict_cycle()
+    test_estimator_initialization_and_presets()
+    test_estimator_convenience_methods()
     print("All estimator tests passed successfully!")
-
