@@ -276,6 +276,10 @@ class BartSurvModel:
         beta = float(self.model_config.get("beta", 2.0))
         with pm.Model(coords=mcoords) as self.model:    
             trees = pmb.BART("trees", X=np.zeros((1, self.X.shape[1])), Y=np.zeros(1), m=self.M, alpha=alpha, beta=beta)
+            if hasattr(trees, "owner") and hasattr(trees.owner, "op") and hasattr(trees.owner.op, "all_trees"):
+                self._manager = getattr(trees.owner.op.all_trees, "_manager", None)
+            else:
+                self._manager = None
             prob = 0.5 * (1.0 + pt.erf(trees / pt.sqrt(2.0)))
             obs = pm.Bernoulli("obs", p=prob, observed=self.y)
         
@@ -366,6 +370,8 @@ class BartSurvModel:
         """
         # build model
         self.build_model(X, y, weights, coords, predictor_names)
+        if predictor_names is not None and len(predictor_names) > 1 and self.feature_names_ is None:
+            self.feature_names_ = list(predictor_names[1:])
         sampler_config = self.sampler_config.copy()
         sampler_config["progressbar"] = progressbar
         sampler_config["random_seed"] = random_seed
@@ -387,7 +393,37 @@ class BartSurvModel:
             self.event_weights_ = self.event_counts_ / tot_ev if tot_ev > 0 else np.ones(len(unique_t)) / len(unique_t)
 
         self.all_trees = list(self.idata.sample_stats)
+        # Release background SyncManager process now that MCMC sampling is complete
+        self.close()
         return self.idata
+
+    def close(self) -> None:
+        """Explicitly releases background SyncManager server processes and frees IPC memory."""
+        if getattr(self, "_manager", None) is not None:
+            try:
+                self._manager.shutdown()
+                self._manager = None
+            except Exception:
+                pass
+        if hasattr(self, "custom_step") and hasattr(self.custom_step, "all_trees"):
+            mgr = getattr(self.custom_step.all_trees, "_manager", None)
+            if mgr is not None:
+                try:
+                    mgr.shutdown()
+                except Exception:
+                    pass
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
+    def __enter__(self) -> "BartSurvModel":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.close()
 
     def set_idata_attrs(
         self, 
@@ -692,8 +728,9 @@ class BartSurvModel:
             raise RuntimeError("Model is not fitted yet.")
 
         if isinstance(X, np.ndarray):
-            if hasattr(self, "feature_names_") and len(self.feature_names_) == X.shape[1]:
-                X_df = pd.DataFrame(X, columns=self.feature_names_)
+            feat_names = getattr(self, "feature_names_", None)
+            if feat_names is not None and len(feat_names) == X.shape[1]:
+                X_df = pd.DataFrame(X, columns=feat_names)
             else:
                 X_df = pd.DataFrame(X)
         else:
