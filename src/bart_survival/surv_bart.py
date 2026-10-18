@@ -14,6 +14,8 @@ Provides:
 - compute_pdp_difference (alias pdp_diff_metric): Posterior marginal survival difference extraction.
 """
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Union, Any
@@ -42,7 +44,7 @@ class BartSurvModel:
     cutpoints (512 resolution), MCMC thinning, and support-audited Causal G-Computation.
     """
     _model_type = "BART_Survival"
-    version = "0.2"
+    version = "0.2.1"
 
     def __init__(
         self,
