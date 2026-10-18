@@ -84,9 +84,19 @@ causal_res = model.estimate_effect(
     primary_col="inpatient", 
     values=[0, 1]
 )
-print("\nEstimated Hazard Ratio (Mean across follow-up):", causal_res["hazard_ratio_mean"].mean())
-print("95% Credible Interval:", causal_res["hazard_ratio_ci"][:, :3])
+print("\nEvent-Weighted Summary HR:", causal_res["hazard_ratio_weighted_mean"])
+print("95% Credible Interval:     ", causal_res["hazard_ratio_weighted_ci"])
+print("Horizon Risk Difference:   ", causal_res["risk_difference_horizon_mean"])
 print("Flagged Support Violations:", causal_res["flagged_support_violations"])
+
+# 7. Continuous Shift Intervention (Modified Treatment Policy: Xi -> Xi + delta)
+shift_res = model.estimate_effect(
+    X=X,
+    primary_col="age",
+    delta=5.0  # Shift everyone's age by +5 years
+)
+print("\nAge +5yr Shift Summary HR: ", shift_res["hazard_ratio_weighted_mean"])
+print("Age +5yr Risk Difference:  ", shift_res["risk_difference_horizon_mean"])
 ```
 
 ---
@@ -179,14 +189,30 @@ print("Survival array shape:", sv_curves["sv"].shape)
 
 ---
 
-## Causal G-Computation and Positivity Auditing
+---
 
+## Causal G-Computation and Counterfactual Treatment Effects
+
+### 1. Support-Audited Binary G-Computation
 In observational clinical survival studies, counterfactual interventions often suffer from **positivity violations** or **structural zero dependencies**. For example, assigning `inpatient=0` (outpatient) while leaving `length_of_stay=12 days` creates non-existent clinical combinations that force tree ensembles into off-support extrapolation.
 
 `SurvBART` addresses this via `estimate_effect()` and `compute_causal_pdp()`:
 1. **Positivity & Support Audit**: Automatically scans baseline covariates conditional on exposure levels to identify deterministic zeros, non-overlapping domains, or severe mass-ratio violations.
 2. **Conditional Donor Resampling**: Re-samples dependent features conditional on exposure from observed donor subcohorts while preserving genuine baseline confounders.
-3. **Counterfactual Predictions**: Evaluates both intervention branches through the posterior tree ensemble to yield unconfounded Hazard Ratios and marginal survival difference curves.
+3. **Counterfactual Predictions**: Evaluates both intervention branches through the posterior tree ensemble to yield unconfounded survival curves $S_1(t)$ and $S_0(t)$.
+
+### 2. Continuous Shift Interventions (Modified Treatment Policies)
+For continuous exposures (e.g., biomarker levels, blood pressure, age, radiation dose), arbitrary fixed point comparisons (e.g., $X=1$ vs $X=5$) frequently cause extreme positivity violations. `SurvBART` supports **shift interventions** (Modified Treatment Policies):
+$$\tilde{X}_i = X_i + \Delta \quad \text{vs.} \quad X_i$$
+Evaluating a shift preserves empirical covariate correlations and natural population distributions while estimating realistic, policy-relevant counterfactual effects.
+
+### 3. Hazard Ratios and Risk Differences
+`model.estimate_effect(...)` and `compute_hazard_and_risk_difference(...)` compute comprehensive effect metrics (always formatted as "Intervention (1) over Reference (0)"):
+- **Event-Weighted Summary Hazard Ratio (`hazard_ratio_weighted_mean`)**: The standard summary HR, calculated as the geometric mean across follow-up intervals weighted by empirical event counts ($w_t = d_t / \sum d_t$). Matches the Cox proportional hazards estimand.
+- **Time-Varying Hazard Ratio Curve (`hazard_ratio_curve_mean`)**: Interval-specific hazard ratio computed via the complementary log-log link: $\mathrm{HR}(t) = \log(1 - \bar{h}_1(t)) / \log(1 - \bar{h}_0(t))$.
+- **Discrete Risk Ratio (`discrete_risk_ratio_mean`)**: Raw, interval-by-interval discrete risk ratio $\bar{h}_1(t) / \bar{h}_0(t)$ without temporal averaging.
+- **Risk Difference (`risk_difference_mean`, `risk_difference_horizon_mean`)**: Excess cumulative failure risk: $\mathrm{RD}(t) = (1 - S_1(t)) - (1 - S_0(t)) = S_0(t) - S_1(t)$.
+- **Restricted Mean Survival Time Difference (`rmst_difference_mean`)**: Area between the survival curves over the follow-up horizon.
 
 ---
 

@@ -11,6 +11,8 @@ from bart_survival import (
     get_pdp,
     compute_pdp_difference,
     compute_hazard_ratio,
+    compute_shift_pdp,
+    compute_hazard_and_risk_difference,
 )
 
 
@@ -104,8 +106,79 @@ def test_pdp_metrics():
     assert np.all(hr_res["rr_m"] > 1.0)
 
 
+def test_continuous_shift_pdp():
+    """Verify compute_shift_pdp generates correct natural course vs shifted counterfactual data."""
+    df, meta = simulate_confounded_survival_data(N=40, seed=12)
+    X_df = df[meta["feature_columns"]]
+
+    out_sk, c_idx = compute_shift_pdp(X_df, primary_col="age", delta=5.0)
+    assert out_sk.shape == (2 * len(df), len(meta["feature_columns"]))
+    age_idx = meta["feature_columns"].index("age")
+
+    # Arm 0: natural course
+    arm0_age = out_sk[:len(df), age_idx]
+    assert np.allclose(arm0_age, X_df["age"].values)
+
+    # Arm 1: shifted by +5.0
+    arm1_age = out_sk[len(df):, age_idx]
+    assert np.allclose(arm1_age, X_df["age"].values + 5.0)
+
+
+def test_hazard_and_risk_difference_metrics():
+    """Verify compute_hazard_and_risk_difference with weighted and unweighted HRs and RDs."""
+    n_draws = 40
+    n_obs = 30
+    n_times = 4
+    rng = np.random.default_rng(42)
+
+    # Arm 0 has baseline hazard ~0.1
+    h0 = rng.uniform(0.08, 0.12, size=(n_draws, n_obs, n_times))
+    # Arm 1 has higher hazard ~0.2 (HR ~ 2.0)
+    h1 = rng.uniform(0.18, 0.22, size=(n_draws, n_obs, n_times))
+
+    prob = np.concatenate([h0, h1], axis=1)  # shape: (n_draws, 2 * n_obs, n_times)
+    sv = np.cumprod(1.0 - prob, axis=2)
+    pdp_dict = {"prob": prob, "sv": sv}
+
+    event_weights = np.array([0.4, 0.3, 0.2, 0.1])
+    res = compute_hazard_and_risk_difference(
+        pdp_val=pdp_dict,
+        idx=n_obs,
+        event_weights=event_weights
+    )
+
+    # 1. Summary Hazard Ratios (both weighted and unweighted should be ~2.0)
+    assert "hazard_ratio_weighted_mean" in res
+    assert "hazard_ratio_unweighted_mean" in res
+    assert 1.5 < res["hazard_ratio_weighted_mean"] < 2.5
+    assert 1.5 < res["hazard_ratio_unweighted_mean"] < 2.5
+    assert len(res["hazard_ratio_weighted_ci"]) == 2
+
+    # 2. Discrete risk ratio (raw, not averaged)
+    assert "discrete_risk_ratio_mean" in res
+    assert len(res["discrete_risk_ratio_mean"]) == n_times
+    assert np.all(res["discrete_risk_ratio_mean"] > 1.0)
+
+    # 3. Risk Difference (1 over 0: excess risk > 0)
+    assert "risk_difference_mean" in res
+    assert len(res["risk_difference_mean"]) == n_times
+    assert np.all(res["risk_difference_mean"] > 0.0)
+    assert "risk_difference_weighted_mean" in res
+    assert res["risk_difference_weighted_mean"] > 0.0
+
+    # 4. Survival difference (S1 - S0 < 0)
+    assert "survival_difference_mean" in res
+    assert np.all(res["survival_difference_mean"] < 0.0)
+
+    # 5. RMST difference (< 0 because group 1 has worse survival)
+    assert "rmst_difference_mean" in res
+    assert res["rmst_difference_mean"] < 0.0
+
+
 if __name__ == "__main__":
     test_causal_pdp_support_audit()
     test_compute_pdp_dispatch()
     test_pdp_metrics()
+    test_continuous_shift_pdp()
+    test_hazard_and_risk_difference_metrics()
     print("All causal PDP tests passed successfully!")

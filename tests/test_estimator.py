@@ -99,12 +99,29 @@ def test_estimator_convenience_methods():
     assert len(feat_imp) == len(feature_cols) + 1  # includes discrete time 't'
     assert np.isclose(feat_imp.sum(), 1.0)
 
-    # 4. Test estimate_effect()
+    # 4. Test estimate_effect() on binary exposure
     effect = model.estimate_effect(X, primary_col="inpatient", values=[0, 1])
-    assert "hazard_ratio_mean" in effect
-    assert "difference_mean" in effect
+    assert "hazard_ratio_weighted_mean" in effect
+    assert "hazard_ratio_unweighted_mean" in effect
+    assert "hazard_ratio_curve_mean" in effect
+    assert "discrete_risk_ratio_mean" in effect
+    assert "risk_difference_mean" in effect
+    assert "risk_difference_weighted_mean" in effect
+    assert "rmst_difference_mean" in effect
     assert "flagged_support_violations" in effect
-    assert len(effect["hazard_ratio_mean"]) == len(model.training_times_)
+    assert len(effect["hazard_ratio_curve_mean"]) == len(model.training_times_)
+    assert len(effect["discrete_risk_ratio_mean"]) == len(model.training_times_)
+    assert len(effect["risk_difference_mean"]) == len(model.training_times_)
+    assert effect["variable_type"] == "binary"
+
+    # 5. Test estimate_effect() on continuous exposure (shift effect)
+    cont_effect = model.estimate_effect(X, primary_col="age", delta=5.0)
+    assert cont_effect["variable_type"] == "continuous_shift"
+    assert cont_effect["delta"] == 5.0
+    assert "hazard_ratio_weighted_mean" in cont_effect
+    assert "hazard_ratio_unweighted_mean" in cont_effect
+    assert "risk_difference_mean" in cont_effect
+    assert len(cont_effect["risk_difference_mean"]) == len(model.training_times_)
 
 
 if __name__ == "__main__":

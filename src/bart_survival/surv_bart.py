@@ -156,6 +156,8 @@ class BartSurvModel:
         self.feature_names_: Optional[List[str]] = None
         self.time_scale_: Optional[float] = None
         self.training_times_: Optional[np.ndarray] = None
+        self.event_counts_: Optional[np.ndarray] = None
+        self.event_weights_: Optional[np.ndarray] = None
 
     @classmethod
     def preset_production(cls, **overrides: Any) -> "BartSurvModel":
@@ -371,6 +373,17 @@ class BartSurvModel:
         self.idata = self.sample_model(**sampler_config)
         self.is_fitted_ = True
 
+        # Calculate empirical event counts and interval weights if not already set
+        if self.event_weights_ is None and self.X is not None and self.y is not None:
+            unique_t = np.sort(np.unique(self.X[:, 0]))
+            self.training_times_ = unique_t
+            y_flat = np.asarray(self.y, dtype=np.int32).flatten()
+            self.event_counts_ = np.array([
+                np.sum((self.X[:, 0] == t) & (y_flat == 1)) for t in unique_t
+            ], dtype=np.float64)
+            tot_ev = float(np.sum(self.event_counts_))
+            self.event_weights_ = self.event_counts_ / tot_ev if tot_ev > 0 else np.ones(len(unique_t)) / len(unique_t)
+
         self.all_trees = list(self.idata.sample_stats)
         return self.idata
 
@@ -505,6 +518,12 @@ class BartSurvModel:
         scaled_time = np.ceil(y_time / time_scale) if time_scale is not None else y_time
         self.training_times_ = np.sort(np.unique(scaled_time))
 
+        self.event_counts_ = np.array([
+            np.sum((scaled_time == t) & (y_status == 1)) for t in self.training_times_
+        ], dtype=np.float64)
+        tot_ev = float(np.sum(self.event_counts_))
+        self.event_weights_ = self.event_counts_ / tot_ev if tot_ev > 0 else np.ones(len(self.training_times_)) / len(self.training_times_)
+
         trn = format_survival_data(
             y_time=y_time,
             y_status=y_status,
@@ -620,36 +639,53 @@ class BartSurvModel:
         self,
         X: Union[np.ndarray, pd.DataFrame],
         primary_col: Union[str, int] = "inpatient",
-        values: List[Union[int, float]] = [0, 1],
+        values: Optional[List[Union[int, float]]] = None,
+        delta: Optional[float] = None,
+        shift: Optional[bool] = None,
         times: Optional[Union[np.ndarray, List[float]]] = None,
         audit_support: bool = True,
         donor_seed: Optional[int] = 42,
+        event_weights: Optional[np.ndarray] = None,
+        clip_to_range: bool = False,
         **kwargs: Any
     ) -> Dict[str, Any]:
-        """Estimates counterfactual treatment effects using Support-Audited Causal G-Computation.
+        """Estimates counterfactual treatment effects using Causal G-Computation and Modified Treatment Policies.
 
-        Audits conditional support to detect positivity violations (e.g. deterministic zeros like LOS=0
-        for outpatients). Re-routes dependent features to conditional donor resampling to prevent off-support
-        extrapolation, and derives posterior mean Hazard Ratios and 95% Credible Intervals.
+        Supports both:
+        1. Binary / Categorical exposures: Audits conditional support for positivity violations (e.g. deterministic
+           zeros like LOS=0 for outpatients) and re-routes dependent features to conditional donor resampling.
+        2. Continuous exposures: Evaluates a counterfactual shift intervention (Modified Treatment Policy) comparing
+           natural course (X) vs shifted exposure (X + delta). Alternatively evaluates fixed 2-point contrasts if
+           explicit values=[v0, v1] are supplied.
+
+        Metrics computed:
+        - Event-weighted summary Hazard Ratio (default, Cox-aligned via complementary log-log link).
+        - Unweighted summary Hazard Ratio across follow-up intervals.
+        - Time-varying Hazard Ratio curve HR(t) via complementary log-log link.
+        - Time-varying discrete risk ratio curve RR_discrete(t) = h1(t) / h0(t) (not averaged).
+        - Time-varying Risk Difference curve RD(t) = Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t) (1 over 0).
+        - Survival Difference curve S_1(t) - S_0(t) = -RD(t).
+        - Event-weighted and unweighted summary Risk Differences.
+        - Final horizon Risk Difference RD(t_end).
+        - Restricted Mean Survival Time (RMST) difference.
 
         Args:
             X (Union[np.ndarray, pd.DataFrame]): Baseline cohort covariates.
             primary_col (Union[str, int], optional): Primary exposure variable name or column index. Defaults to "inpatient".
-            values (List[Union[int, float]], optional): Counterfactual intervention values. Defaults to [0, 1].
+            values (Optional[List[Union[int, float]]], optional): Counterfactual intervention values.
+                If None, auto-detects binary exposures ([0, 1]) or triggers continuous shift intervention.
+            delta (Optional[float], optional): Shift increment for continuous exposures (X + delta). Defaults to 1.0.
+            shift (Optional[bool], optional): Force continuous shift intervention mode. Defaults to None.
             times (Optional[Union[np.ndarray, List[float]]], optional): Evaluation time points. Defaults to None.
             audit_support (bool, optional): Whether to audit and flag support violations. Defaults to True.
             donor_seed (Optional[int], optional): Random seed for reproducible donor resampling. Defaults to 42.
+            event_weights (Optional[np.ndarray], optional): Normalized interval weights for summary HR/RD.
+                Defaults to model's empirical event_weights_ if available.
+            clip_to_range (bool, optional): Whether to clip continuous shifted values to observed maximum. Defaults to False.
             **kwargs: Additional prediction keyword arguments.
 
         Returns:
-            Dict[str, Any]:
-                - 'hazard_ratio_mean': Posterior mean hazard ratio across evaluation times.
-                - 'hazard_ratio_ci': 95% Credible Interval quantiles [2.5%, 97.5%].
-                - 'difference_mean': Posterior marginal survival difference curve.
-                - 'difference_ci': 95% Credible Interval of the survival difference curve.
-                - 'times': Evaluated discrete time points.
-                - 'flagged_support_violations': List of features identified as violating conditional support.
-                - 'sv_prob': Raw counterfactual survival and hazard draws.
+            Dict[str, Any]: Dictionary containing weighted and unweighted HRs, RDs, RMST, curves, credible intervals, and draws.
         """
         if not self.is_fitted_:
             raise RuntimeError("Model is not fitted yet.")
@@ -662,13 +698,52 @@ class BartSurvModel:
         else:
             X_df = X.copy()
 
-        out_sk, c_idx, flagged = compute_causal_pdp(
-            x=X_df,
-            primary_col=primary_col,
-            values=values,
-            audit_support=audit_support,
-            donor_seed=donor_seed
-        )
+        if isinstance(primary_col, str):
+            col_name = primary_col
+        else:
+            col_name = X_df.columns[primary_col]
+
+        raw_col_vals = X_df[col_name].values
+        uniq_vals = np.unique(raw_col_vals[~np.isnan(raw_col_vals)])
+        is_binary = (len(uniq_vals) <= 2)
+
+        if is_binary and not shift:
+            if values is None:
+                val_list = [float(uniq_vals[0]), float(uniq_vals[1])] if len(uniq_vals) == 2 else [0.0, 1.0]
+            else:
+                val_list = [float(v) for v in values]
+            
+            out_sk, c_idx, flagged = compute_causal_pdp(
+                x=X_df,
+                primary_col=col_name,
+                values=val_list,
+                audit_support=audit_support,
+                donor_seed=donor_seed
+            )
+            var_type = "binary"
+            applied_delta = None
+        else:
+            if values is not None and len(values) == 2 and not shift:
+                val_list = [float(v) for v in values]
+                out_sk, c_idx, flagged = compute_causal_pdp(
+                    x=X_df,
+                    primary_col=col_name,
+                    values=val_list,
+                    audit_support=audit_support,
+                    donor_seed=donor_seed
+                )
+                var_type = "contrast"
+                applied_delta = None
+            else:
+                applied_delta = 1.0 if delta is None else float(delta)
+                out_sk, c_idx = compute_shift_pdp(
+                    x=X_df,
+                    primary_col=col_name,
+                    delta=applied_delta,
+                    clip_to_range=clip_to_range
+                )
+                flagged = []
+                var_type = "continuous_shift"
 
         if times is None:
             if hasattr(self, "training_times_") and self.training_times_ is not None:
@@ -691,19 +766,29 @@ class BartSurvModel:
         preds = self.predict(post_test["post_x"], coords=post_test["coords"], **kwargs)
         sv_dict = compute_survival_curves(preds, post_test["coords"])
 
-        n_cohort = len(X_df)
-        hr_res = compute_hazard_ratio(sv_dict, idx=n_cohort)
-        diff_res = compute_pdp_difference(sv_dict, idx=n_cohort)
+        # Determine interval event weights
+        if event_weights is not None:
+            eff_weights = event_weights
+        elif hasattr(self, "event_weights_") and self.event_weights_ is not None:
+            eff_weights = self.event_weights_
+        else:
+            eff_weights = None
 
-        return {
-            "hazard_ratio_mean": hr_res["rr_m"],
-            "hazard_ratio_ci": hr_res["rr_q"],
-            "difference_mean": diff_res["diff_m"],
-            "difference_ci": diff_res["diff_q"],
+        n_cohort = len(X_df)
+        effects_res = compute_hazard_and_risk_difference(
+            pdp_val=sv_dict,
+            idx=n_cohort,
+            event_weights=eff_weights
+        )
+
+        effects_res.update({
             "times": eval_times,
             "flagged_support_violations": flagged,
+            "variable_type": var_type,
+            "delta": applied_delta,
             "sv_prob": sv_dict,
-        }
+        })
+        return effects_res
     
     def bart_predict(
         self, 
@@ -1149,6 +1234,60 @@ def get_causal_pdp(
     return out_sk, c_idx, dependent_features
 
 
+def compute_shift_pdp(
+    x: Union[pd.DataFrame, np.ndarray],
+    primary_col: Union[str, int],
+    delta: float = 1.0,
+    clip_to_range: bool = False
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """Generates counterfactual datasets for a continuous shift intervention (Modified Treatment Policy).
+
+    Contrasts the natural course cohort (Arm 0: X) against a cohort where every individual's
+    continuous exposure is shifted by delta units (Arm 1: X + delta).
+
+    Args:
+        x (Union[pd.DataFrame, np.ndarray]): Baseline covariate matrix or DataFrame.
+        primary_col (Union[str, int]): Continuous variable name or column index to shift.
+        delta (float, optional): Increment added to primary_col. Defaults to 1.0.
+        clip_to_range (bool, optional): Whether to clip shifted values to observed maximum. Defaults to False.
+
+    Returns:
+        Tuple[np.ndarray, Dict[str, Any]]:
+            - out_sk: Stacked counterfactual matrix of shape (2 * N, n_features).
+            - c_idx: Index coordinate dictionary demarcating Arm 0 and Arm 1.
+    """
+    if isinstance(x, np.ndarray):
+        x_df = pd.DataFrame(x)
+        col_name = primary_col if isinstance(primary_col, int) else int(primary_col)
+    else:
+        x_df = x.copy()
+        col_name = primary_col
+
+    # Arm 0: Natural course (observed X)
+    arm0 = x_df.copy()
+
+    # Arm 1: Shifted by delta
+    arm1 = x_df.copy()
+    shifted_vals = arm1[col_name].values.astype(np.float64) + float(delta)
+    if clip_to_range:
+        max_val = np.max(x_df[col_name].values)
+        shifted_vals = np.minimum(shifted_vals, max_val)
+    arm1[col_name] = shifted_vals
+
+    s3 = x_df.shape[0]
+    out_sk = np.vstack([arm0.values, arm1.values])
+    c_idx = np.repeat(np.arange(2), s3)
+    c_idx_uniq = np.unique(c_idx, return_index=True, return_counts=True, return_inverse=True)
+    c_idx_dict = {
+        "val": c_idx_uniq[0],
+        "idx": c_idx_uniq[1],
+        "coord": c_idx_uniq[2],
+        "cnt": c_idx_uniq[3],
+        "len": out_sk.shape[0]
+    }
+    return out_sk, c_idx_dict
+
+
 def get_pdp(
     x: Union[np.ndarray, pd.DataFrame], 
     var_col: List[Union[int, str]] = [], 
@@ -1343,6 +1482,130 @@ def pdp_rr_metric(
     }
 
 
+def compute_hazard_and_risk_difference(
+    pdp_val: Dict[str, np.ndarray],
+    idx: int,
+    event_weights: Optional[np.ndarray] = None,
+    qntile: List[float] = [0.025, 0.975],
+    eps: float = 1e-7
+) -> Dict[str, Any]:
+    """Computes event-weighted and unweighted Hazard Ratios and Risk Differences from counterfactual predictions.
+
+    Contrasts Intervention Arm 1 (obs >= idx) over Reference Arm 0 (obs < idx).
+
+    Calculates:
+    - Event-weighted summary Hazard Ratio (default, Cox-aligned via complementary log-log link).
+    - Unweighted summary Hazard Ratio across follow-up intervals.
+    - Time-varying Hazard Ratio curve HR(t) via complementary log-log link.
+    - Time-varying discrete risk ratio curve RR_discrete(t) = h1(t) / h0(t) (not averaged).
+    - Time-varying Risk Difference curve RD(t) = Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t) (1 over 0).
+    - Survival Difference curve S_1(t) - S_0(t) = -RD(t).
+    - Event-weighted and unweighted summary Risk Differences.
+    - Final horizon Risk Difference RD(t_end).
+    - Restricted Mean Survival Time (RMST) difference.
+
+    Args:
+        pdp_val (Dict[str, np.ndarray]): Dictionary containing 'prob' (hazards) and 'sv' (survival curves).
+            Arrays have shape (n_draws, 2 * N, n_times).
+        idx (int): Split index demarcating Reference Arm 0 (:idx) and Intervention Arm 1 (idx:).
+        event_weights (Optional[np.ndarray], optional): Normalized event weights per interval.
+            If None, defaults to uniform interval weighting.
+        qntile (List[float], optional): Credible interval quantiles. Defaults to [0.025, 0.975].
+        eps (float, optional): Epsilon threshold for numerical safety. Defaults to 1e-7.
+
+    Returns:
+        Dict[str, Any]: Comprehensive dictionary containing summary statistics, credible intervals, and draw arrays.
+    """
+    prob = pdp_val["prob"]
+    sv = pdp_val["sv"]
+    n_times = prob.shape[2]
+
+    # Population marginal hazards per draw across subjects
+    h0 = np.clip(prob[:, :idx, :].mean(axis=1), eps, 1.0 - eps)
+    h1 = np.clip(prob[:, idx:, :].mean(axis=1), eps, 1.0 - eps)
+
+    # Population marginal survival per draw across subjects
+    s0 = sv[:, :idx, :].mean(axis=1)
+    s1 = sv[:, idx:, :].mean(axis=1)
+
+    # 1. Time-varying Hazard Ratio via cloglog link: log(1 - h1) / log(1 - h0)
+    hr_by_time = np.log(1.0 - h1) / np.log(1.0 - h0)
+
+    # 2. Time-varying raw discrete risk ratio: h1 / h0 (not averaged across time)
+    discrete_rr_by_time = h1 / h0
+
+    # Interval event weights
+    if event_weights is None:
+        w = np.ones(n_times, dtype=np.float64) / n_times
+    else:
+        w = np.asarray(event_weights, dtype=np.float64)
+        if w.sum() > 0:
+            w = w / w.sum()
+        else:
+            w = np.ones(n_times, dtype=np.float64) / n_times
+
+    # 3. Event-weighted summary Hazard Ratio (Cox-aligned)
+    log_hr = np.log(np.clip(hr_by_time, eps, 1e7))
+    weighted_hr_draws = np.exp(np.dot(log_hr, w))
+
+    # 4. Unweighted summary Hazard Ratio (geometric across time intervals)
+    unweighted_hr_draws = np.exp(np.mean(log_hr, axis=1))
+    unweighted_hr_arithmetic = hr_by_time.mean(axis=1)
+
+    # 5. Risk Difference (1 over 0: excess event risk): Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t)
+    rd_by_time = s0 - s1
+    surv_diff_by_time = s1 - s0
+
+    # 6. Summary Risk Differences
+    weighted_rd_draws = np.dot(rd_by_time, w)
+    unweighted_rd_draws = rd_by_time.mean(axis=1)
+    horizon_rd_draws = rd_by_time[:, -1]
+
+    # 7. Restricted Mean Survival Time (RMST) Difference
+    rmst_diff_draws = surv_diff_by_time.sum(axis=1)
+
+    return {
+        # Summary Hazard Ratios
+        "hazard_ratio_weighted_mean": float(np.mean(weighted_hr_draws)),
+        "hazard_ratio_weighted_ci": np.quantile(weighted_hr_draws, qntile).tolist(),
+        "hazard_ratio_weighted_draws": weighted_hr_draws,
+        "hazard_ratio_unweighted_mean": float(np.mean(unweighted_hr_draws)),
+        "hazard_ratio_unweighted_ci": np.quantile(unweighted_hr_draws, qntile).tolist(),
+        "hazard_ratio_unweighted_draws": unweighted_hr_draws,
+        "hazard_ratio_unweighted_arithmetic_mean": float(np.mean(unweighted_hr_arithmetic)),
+        # Time-varying HR and discrete risk ratio curves
+        "hazard_ratio_curve_mean": np.round(hr_by_time.mean(axis=0), 3),
+        "hazard_ratio_curve_ci": np.round(np.quantile(hr_by_time, qntile, axis=0), 3),
+        "hazard_ratio_curve_draws": hr_by_time,
+        "discrete_risk_ratio_mean": np.round(discrete_rr_by_time.mean(axis=0), 3),
+        "discrete_risk_ratio_ci": np.round(np.quantile(discrete_rr_by_time, qntile, axis=0), 3),
+        "discrete_risk_ratio_draws": discrete_rr_by_time,
+        # Risk Differences (1 over 0: excess event risk)
+        "risk_difference_mean": np.round(rd_by_time.mean(axis=0), 3),
+        "risk_difference_ci": np.round(np.quantile(rd_by_time, qntile, axis=0), 3),
+        "risk_difference_draws": rd_by_time,
+        "risk_difference_weighted_mean": float(np.mean(weighted_rd_draws)),
+        "risk_difference_weighted_ci": np.quantile(weighted_rd_draws, qntile).tolist(),
+        "risk_difference_unweighted_mean": float(np.mean(unweighted_rd_draws)),
+        "risk_difference_unweighted_ci": np.quantile(unweighted_rd_draws, qntile).tolist(),
+        "risk_difference_horizon_mean": float(np.mean(horizon_rd_draws)),
+        "risk_difference_horizon_ci": np.quantile(horizon_rd_draws, qntile).tolist(),
+        # Survival Difference (S1 - S0)
+        "survival_difference_mean": np.round(surv_diff_by_time.mean(axis=0), 3),
+        "survival_difference_ci": np.round(np.quantile(surv_diff_by_time, qntile, axis=0), 3),
+        # Restricted Mean Survival Time Difference
+        "rmst_difference_mean": float(np.mean(rmst_diff_draws)),
+        "rmst_difference_ci": np.quantile(rmst_diff_draws, qntile).tolist(),
+        # Weights used
+        "event_weights": w,
+        # Backward compatibility aliases
+        "hazard_ratio_mean": np.round(hr_by_time.mean(axis=0), 3),
+        "hazard_ratio_ci": np.round(np.quantile(hr_by_time, qntile, axis=0), 3),
+        "difference_mean": np.round(surv_diff_by_time.mean(axis=0), 3),
+        "difference_ci": np.round(np.quantile(surv_diff_by_time, qntile, axis=0), 3),
+    }
+
+
 # ==========================================
 # Modern API Aliases (100% Backward Compatible)
 # ==========================================
@@ -1353,8 +1616,10 @@ compute_survival_curves = get_sv_prob
 compute_survival_quantiles = get_sv_mean_quant
 compute_pdp = get_pdp
 compute_causal_pdp = get_causal_pdp
+get_shift_pdp = compute_shift_pdp
 compute_pdp_difference = pdp_diff_metric
 compute_hazard_ratio = pdp_rr_metric
+pdp_hr_rd_metric = compute_hazard_and_risk_difference
 
 __all__ = [
     # Estimator
@@ -1370,14 +1635,18 @@ __all__ = [
     "get_sv_prob",
     "compute_survival_quantiles",
     "get_sv_mean_quant",
-    # Partial dependence & causal g-computation
+    # Partial dependence, shift interventions & causal g-computation
     "compute_pdp",
     "get_pdp",
     "compute_causal_pdp",
     "get_causal_pdp",
+    "compute_shift_pdp",
+    "get_shift_pdp",
     "compute_pdp_difference",
     "pdp_diff_metric",
     "compute_hazard_ratio",
     "pdp_rr_metric",
+    "compute_hazard_and_risk_difference",
+    "pdp_hr_rd_metric",
 ]
     

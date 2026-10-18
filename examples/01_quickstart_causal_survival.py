@@ -92,14 +92,28 @@ def main():
         donor_seed=42
     )
 
-    hr_mean = causal_effect["hazard_ratio_mean"]
-    hr_ci = causal_effect["hazard_ratio_ci"]
+    weighted_hr = causal_effect["hazard_ratio_weighted_mean"]
+    weighted_ci = causal_effect["hazard_ratio_weighted_ci"]
+    rd_horizon = causal_effect["risk_difference_horizon_mean"]
     flagged = causal_effect["flagged_support_violations"]
 
     print(f"Flagged support violations handled: {flagged}")
     print(f"Ground-truth Hazard Ratio:  {true_hr:.2f}")
-    print(f"Estimated Mean Hazard Ratio: {hr_mean.mean():.2f} (Across follow-up intervals)")
-    print(f"Hazard Ratio 95% CI:        [{hr_ci[0].mean():.2f}, {hr_ci[1].mean():.2f}]")
+    print(f"Event-Weighted Summary HR:  {weighted_hr:.2f} (95% CI: [{weighted_ci[0]:.2f}, {weighted_ci[1]:.2f}])")
+    print(f"Horizon Risk Difference:    {rd_horizon:+.2%} (Excess risk: Arm 1 - Arm 0)")
+
+    # 7. Continuous Shift Intervention (Modified Treatment Policy)
+    print("\n[7] Estimating Continuous Shift Intervention for 'age' (+5 years)...")
+    shift_effect = model.estimate_effect(
+        X=X,
+        primary_col="age",
+        delta=5.0
+    )
+    shift_hr = shift_effect["hazard_ratio_weighted_mean"]
+    shift_ci = shift_effect["hazard_ratio_weighted_ci"]
+    shift_rd = shift_effect["risk_difference_horizon_mean"]
+    print(f"Shift (+5 yrs) Summary HR:  {shift_hr:.2f} (95% CI: [{shift_ci[0]:.2f}, {shift_ci[1]:.2f}])")
+    print(f"Shift Horizon Risk Diff:    {shift_rd:+.2%}")
 
     print("\n" + "=" * 70)
     print("Tutorial execution completed successfully!")
@@ -108,3 +122,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
