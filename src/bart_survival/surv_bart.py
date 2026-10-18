@@ -603,6 +603,7 @@ class BartSurvModel:
                 "mean": sv_mean,
                 "lower": sv_q[0],
                 "upper": sv_q[1],
+                "quantiles": sv_q,
                 "times": eval_times,
                 "prob": sv_dict["prob"],
                 "sv": sv_curves,
@@ -1529,10 +1530,10 @@ def compute_hazard_and_risk_difference(
     s1 = sv[:, idx:, :].mean(axis=1)
 
     # 1. Time-varying Hazard Ratio via cloglog link: log(1 - h1) / log(1 - h0)
-    hr_by_time = np.log(1.0 - h1) / np.log(1.0 - h0)
+    hr_by_time = np.clip(np.log(1.0 - h1) / np.log(1.0 - h0), 1e-4, 1e4)
 
     # 2. Time-varying raw discrete risk ratio: h1 / h0 (not averaged across time)
-    discrete_rr_by_time = h1 / h0
+    discrete_rr_by_time = np.clip(h1 / h0, 1e-4, 1e4)
 
     # Interval event weights
     if event_weights is None:
@@ -1544,13 +1545,14 @@ def compute_hazard_and_risk_difference(
         else:
             w = np.ones(n_times, dtype=np.float64) / n_times
 
-    # 3. Event-weighted summary Hazard Ratio (Cox-aligned)
-    log_hr = np.log(np.clip(hr_by_time, eps, 1e7))
-    weighted_hr_draws = np.exp(np.dot(log_hr, w))
+    # 3. Event-weighted summary Hazard Ratio (Cox-aligned geometric mean across intervals)
+    log_hr = np.log(hr_by_time)
+    weighted_log_hr_draws = np.dot(log_hr, w)
+    weighted_hr_draws = np.exp(weighted_log_hr_draws)
 
     # 4. Unweighted summary Hazard Ratio (geometric across time intervals)
-    unweighted_hr_draws = np.exp(np.mean(log_hr, axis=1))
-    unweighted_hr_arithmetic = hr_by_time.mean(axis=1)
+    unweighted_log_hr_draws = np.mean(log_hr, axis=1)
+    unweighted_hr_draws = np.exp(unweighted_log_hr_draws)
 
     # 5. Risk Difference (1 over 0: excess event risk): Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t)
     rd_by_time = s0 - s1
@@ -1565,14 +1567,19 @@ def compute_hazard_and_risk_difference(
     rmst_diff_draws = surv_diff_by_time.sum(axis=1)
 
     return {
-        # Summary Hazard Ratios
-        "hazard_ratio_weighted_mean": float(np.mean(weighted_hr_draws)),
+        # Summary Hazard Ratios (Cox-aligned posterior expectation of log-hazard ratio)
+        "hazard_ratio_weighted_mean": float(np.exp(np.mean(weighted_log_hr_draws))),
+        "hazard_ratio_weighted_geometric_mean": float(np.exp(np.mean(weighted_log_hr_draws))),
+        "hazard_ratio_weighted_median": float(np.median(weighted_hr_draws)),
+        "hazard_ratio_weighted_arithmetic_mean": float(np.mean(weighted_hr_draws)),
         "hazard_ratio_weighted_ci": np.quantile(weighted_hr_draws, qntile).tolist(),
         "hazard_ratio_weighted_draws": weighted_hr_draws,
-        "hazard_ratio_unweighted_mean": float(np.mean(unweighted_hr_draws)),
+        "hazard_ratio_unweighted_mean": float(np.exp(np.mean(unweighted_log_hr_draws))),
+        "hazard_ratio_unweighted_geometric_mean": float(np.exp(np.mean(unweighted_log_hr_draws))),
+        "hazard_ratio_unweighted_median": float(np.median(unweighted_hr_draws)),
+        "hazard_ratio_unweighted_arithmetic_mean": float(np.mean(unweighted_hr_draws)),
         "hazard_ratio_unweighted_ci": np.quantile(unweighted_hr_draws, qntile).tolist(),
         "hazard_ratio_unweighted_draws": unweighted_hr_draws,
-        "hazard_ratio_unweighted_arithmetic_mean": float(np.mean(unweighted_hr_arithmetic)),
         # Time-varying HR and discrete risk ratio curves
         "hazard_ratio_curve_mean": np.round(hr_by_time.mean(axis=0), 3),
         "hazard_ratio_curve_ci": np.round(np.quantile(hr_by_time, qntile, axis=0), 3),
@@ -1590,6 +1597,15 @@ def compute_hazard_and_risk_difference(
         "risk_difference_unweighted_ci": np.quantile(unweighted_rd_draws, qntile).tolist(),
         "risk_difference_horizon_mean": float(np.mean(horizon_rd_draws)),
         "risk_difference_horizon_ci": np.quantile(horizon_rd_draws, qntile).tolist(),
+        # Marginal Counterfactual Survival Curves S1(t) and S0(t)
+        "survival_1_mean": np.round(s1.mean(axis=0), 3),
+        "survival_1_ci": np.round(np.quantile(s1, qntile, axis=0), 3),
+        "survival_0_mean": np.round(s0.mean(axis=0), 3),
+        "survival_0_ci": np.round(np.quantile(s0, qntile, axis=0), 3),
+        "s1_curve_mean": np.round(s1.mean(axis=0), 3),
+        "s1_curve_ci": np.round(np.quantile(s1, qntile, axis=0), 3),
+        "s0_curve_mean": np.round(s0.mean(axis=0), 3),
+        "s0_curve_ci": np.round(np.quantile(s0, qntile, axis=0), 3),
         # Survival Difference (S1 - S0)
         "survival_difference_mean": np.round(surv_diff_by_time.mean(axis=0), 3),
         "survival_difference_ci": np.round(np.quantile(surv_diff_by_time, qntile, axis=0), 3),
