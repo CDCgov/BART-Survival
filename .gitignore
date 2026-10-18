@@ -1,17 +1,54 @@
-.venv
+# Python & Bytecode
+*.py[cod]
+*$py.class
+__pycache__/
 *__pycache__
-*__pycache__
-*.pyc
+*.nbc
+*.nbi
 *.pkl
 
-# dist/
-src/*.egg-info/
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Distribution / Packaging
+build/
+dist/
 *.egg-info/
+src/*.egg-info/
+*.whl
+*.tar.gz
+
+# Jupyter Notebooks & Caches
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+.pytest_cache/
+
+# OS-specific
+.DS_Store
+*/.DS_Store
+Thumbs.db
+
+# Editor & IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# R-specific
+.RData
+.Rhistory
+
+# Scratch / Internal Notes
 dump/
 *todo.txt
-.vscode/
 todo.txt
 todo.md
 paper_todo.md
-.RData
-.Rhistory
+
+# Data Guardrails (Prevent committing patient or raw clinical data)
+d.csv
+*.parquet
+*.feather

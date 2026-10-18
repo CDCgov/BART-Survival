@@ -89,6 +89,42 @@ def test_surv_bart():
     print(HR)
     print(HR_QT)
 
+
+def test_modern_api():
+    """Verify modern top-level imports and alias function equivalence."""
+    from bart_survival import (
+        SurvBART,
+        BartSurvModel,
+        format_survival_data,
+        get_surv_pre_train,
+        format_prediction_data,
+        get_posterior_test,
+        compute_survival_curves,
+        get_sv_prob,
+        compute_survival_quantiles,
+        get_sv_mean_quant,
+        compute_pdp,
+        get_pdp,
+        compute_causal_pdp,
+        get_causal_pdp,
+        compute_hazard_ratio,
+        pdp_rr_metric,
+        compute_pdp_difference,
+        pdp_diff_metric,
+    )
+
+    assert SurvBART is BartSurvModel
+    assert format_survival_data is get_surv_pre_train
+    assert format_prediction_data is get_posterior_test
+    assert compute_survival_curves is get_sv_prob
+    assert compute_survival_quantiles is get_sv_mean_quant
+    assert compute_pdp is get_pdp
+    assert compute_causal_pdp is get_causal_pdp
+    assert compute_hazard_ratio is pdp_rr_metric
+    assert compute_pdp_difference is pdp_diff_metric
+
+
 if __name__ == "__main__":
+    test_modern_api()
     test_surv_bart()
     print("Everything passed")

@@ -1,3 +1,18 @@
+"""
+bart_survival.surv_bart
+=======================
+High-level API for Bayesian Additive Regression Trees (BART) survival analysis.
+
+Provides:
+- SurvBART (alias BartSurvModel): Estimator class with fit, predict, and serialization.
+- format_survival_data (alias get_surv_pre_train): Preprocess time-to-event data into pooled cross-sections.
+- format_prediction_data (alias get_posterior_test): Prepare test covariates across prediction time intervals.
+- compute_survival_curves (alias get_sv_prob): Cumulative product survival probability transformation.
+- compute_pdp (alias get_pdp): Partial dependence data generation.
+- compute_causal_pdp (alias get_causal_pdp): Causal G-Computation with support violation audit.
+- compute_hazard_ratio (alias pdp_rr_metric): Posterior Risk Ratio / Hazard Ratio extraction.
+- compute_pdp_difference (alias pdp_diff_metric): Posterior marginal survival difference extraction.
+"""
 
 import numpy as np
 import pandas as pd
@@ -18,40 +33,34 @@ from numpy.random import RandomState
 import multiprocessing as mp
 from .bart_adj import FastSurvMHBART, predict_out_of_sample
 
-# test
-class BartSurvModel():
-    """BART Survival Model
 
-    Returns:
-        _type_: BartSurvModel
+class BartSurvModel:
+    """Bayesian Additive Regression Trees (BART) Survival Model (SurvBART).
+
+    Implements discrete-time probit hazard modeling using sum-of-trees ensemble.
+    Compatible with scikit-survival style data formats and standard Bayesian workflows.
     """
     _model_type = "BART_Survival"
-    version = "0.1"
+    version = "0.2"
+
     def __init__(
         self,
-        model_config: Dict = None, 
-        sampler_config: Dict = None
+        model_config: Optional[Dict] = None, 
+        sampler_config: Optional[Dict] = None
     ):
-        """Initialize BartSurvModel.
+        """Initialize BartSurvModel / SurvBART.
 
         Args:
-            model_config (Dict, optional): model configuration parameters. Defaults to None.
-            sampler_config (Dict, optional): model sampling parameters. Defaults to None.
+            model_config (Dict, optional): Prior and model configuration (e.g. trees, split_rules, split_prior).
+            sampler_config (Dict, optional): MCMC sampling parameters (e.g. draws, tune, cores, chains, thin).
         """
-        sampler_config = (self.get_default_sampler_config() if sampler_config is None else sampler_config)
+        sampler_config = self.get_default_sampler_config() if sampler_config is None else sampler_config
         self.sampler_config = sampler_config
         model_config = self.get_default_model_config() if model_config is None else model_config
         self.model_config = model_config  # parameters for priors etc.
         self.model = None  # Set by build_model
         self.idata: Optional[az.InferenceData] = None  # idata is generated during fitting
         self.is_fitted_ = False
-
-    # note that this needs to be implemented at the pymc-BART level, otherwise it is untraceable and can lead to unwanted behavior        
-    # deconstructure added to handle the linger processes
-    # def __del__(self): 
-    #     childs = mp.active_children()
-    #     for child in childs:
-    #         child.kill()
 
 
 
@@ -79,7 +88,11 @@ class BartSurvModel():
         # check x,y,weights        
         self._generate_and_preprocess_model_data(X, y, weights, predictor_names)
         # Get model Configs
-        SPLIT_RULES = [eval(rule) for rule in self.model_config.get("split_rules", None)]
+        split_rules = self.model_config.get("split_rules", None)
+        if split_rules is None:
+            SPLIT_RULES = [pmb.ContinuousSplitRule] * self.X.shape[1]
+        else:
+            SPLIT_RULES = [eval(rule) if isinstance(rule, str) else rule for rule in split_rules]
         SPLIT_PRIOR = self.model_config.get("split_prior")
         self.M = self.model_config.get("trees", 20)
 
@@ -95,13 +108,19 @@ class BartSurvModel():
         mcoords = {"xvars":self.predictor_names}
         k = self.sampler_config.get("k", 2)
         update_fraction = self.sampler_config.get("update_fraction", .1)
-        step_size = self.sampler_config.get("step_size", .3)
+        min_node_size = self.sampler_config.get("min_node_size", 5)
+        unique_midpoints = self.sampler_config.get("unique_midpoints", False)
         self.use_sparsity = self.sampler_config.get("use_sparsity", False)
+        tune = self.sampler_config.get("tune", 1000)
+        default_warmup = min(300, max(50, tune // 2))
+        sparsity_warmup = self.sampler_config.get("sparsity_warmup", default_warmup)
         
         # initalize model
+        alpha = self.model_config.get("alpha", 0.95)
+        beta = self.model_config.get("beta", 2.0)
         with pm.Model(coords=mcoords) as self.model:    
             # dummy place-holder - data actually set in the step backdoor
-            trees = pmb.BART("trees", X=np.zeros((1,self.X.shape[1])), Y=np.zeros(1), m=self.M)
+            trees = pmb.BART("trees", X=np.zeros((1,self.X.shape[1])), Y=np.zeros(1), m=self.M, alpha=alpha, beta=beta)
             prob = 0.5 * (1.0 + pt.erf(trees / pt.sqrt(2.0)))
             obs = pm.Bernoulli("obs", p=prob, observed=self.y)
         
@@ -109,13 +128,16 @@ class BartSurvModel():
             self.custom_step = FastSurvMHBART(
                     vars=[trees], 
                     use_sparsity=self.use_sparsity, 
+                    sparsity_warmup=sparsity_warmup,
                     target_x = self.X,
                     target_y = self.y,
                     update_fraction=update_fraction, # number of trees to update
                     k=k, 
-                    step_size = step_size, # random-walk step size 
+                    min_node_size=min_node_size,
+                    unique_midpoints=unique_midpoints,
                     return_estimate = False
                     )
+            self.offset = self.custom_step.offset
             
 
 
@@ -134,24 +156,28 @@ class BartSurvModel():
             )
         
 
-        draws = self.sampler_config.get("draws")
-        tune = self.sampler_config.get("tune")
+        draws = self.sampler_config.get("draws", 2000)
+        tune = self.sampler_config.get("tune", 1000)
+        chains = self.sampler_config.get("chains", 4)
+        cores = self.sampler_config.get("cores", 4)
+        thin = self.sampler_config.get("thin", 1)
+        thin_idata = self.sampler_config.get("thin_idata", False)
 
         with self.model:
             sampler_args = {**self.sampler_config, **kwargs}
-            # idata = pm.sample(**sampler_args)
+            pbar = sampler_args.get("progressbar", kwargs.get("progressbar", True))
             idata = pm.sample(
                 draws=draws, 
                 tune=tune, 
-                # chains=4, 
-                # cores=4,
+                chains=chains, 
+                cores=cores,
                 step=self.custom_step,  # If None, PyMC handles it
-                # mp_ctx=mp.get_context("forkserver"),
-                # blas_cores=1,
                 compute_convergence_checks=False,
-                progressbar=True,
+                progressbar=pbar,
                 discard_tuned_samples=True
             )
+        if thin > 1 and thin_idata:
+            idata = idata.sel(draw=slice(None, None, thin))
         idata = self.set_idata_attrs(idata)
         return idata
 
@@ -191,24 +217,8 @@ class BartSurvModel():
         self.idata = self.sample_model(**sampler_config)
         self.is_fitted_ = True
 
-        # get tree struct
-        # self.all_trees = list(self.model.f.owner.op.all_trees) #old
         self.all_trees = list(self.idata.sample_stats)
-        # get x names
-
-
-        # create idata of testing data
-        combined_data = np.hstack([self.y, self.weights, self.X])
-        # assert all(combined_data.columns), "All columns must have non-empty names"
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                category=UserWarning#,
-            )
-            # self.idata.add_groups(fit_data=xr.DataArray(combined_data))  # type: ignore
-            # self.idata.add_groups(predictor_names = xr.DataArray(self.predictor_names))
-            # self.idata.add_groups(offset = xr.DataArray(self.offset))
-        return self.idata  # type: ignore
+        return self.idata
 
     def set_idata_attrs(
         self, 
@@ -232,6 +242,11 @@ class BartSurvModel():
         idata.attrs["version"] = self.version
         idata.attrs["sampler_config"] = json.dumps(self.sampler_config)
         idata.attrs["model_config"] = json.dumps(self._serializable_model_config)
+        if hasattr(self, "offset") and self.offset is not None:
+            if isinstance(self.offset, tuple):
+                idata.attrs["offset"] = json.dumps([self.offset[0].tolist(), self.offset[1].tolist()])
+            elif np.ndim(self.offset) == 0:
+                idata.attrs["offset"] = float(self.offset)
         return idata
 
     def sample_posterior_predictive(
@@ -254,19 +269,25 @@ class BartSurvModel():
         if not self.is_fitted_:
             raise RuntimeError("Model is not fitted in this instance. Either refit or predict with bart_predict")
         
-        thin = self.sampler_config.get("thin", 1)
-        preds = predict_out_of_sample(self.idata, X_pred, self.custom_step.offset, m_trees=self.M, thin=thin)
-        return preds
-        # with self.model:  # sample with new input data
-        #     pm.set_data({"x_data":X_pred} , coords={"p_obs":coords})
-        #     post_pred = pm.sample_posterior_predictive(self.idata, var_names=["mu"],**kwargs)
-        #     if extend_idata:
-        #         self.idata.extend(post_pred)
-        # posterior_predictive_samples = az.extract(
-        #     post_pred, "posterior_predictive", combined=True
-        # )
+        offset = getattr(self, "offset", None)
+        if offset is None and hasattr(self, "custom_step") and self.custom_step is not None:
+            offset = getattr(self.custom_step, "offset", None)
+        if offset is None and hasattr(self, "idata") and self.idata is not None and "offset" in self.idata.attrs:
+            raw_off = self.idata.attrs["offset"]
+            if isinstance(raw_off, str):
+                loaded = json.loads(raw_off)
+                if isinstance(loaded, list) and len(loaded) == 2:
+                    offset = (np.array(loaded[0], dtype=np.float64), np.array(loaded[1], dtype=np.float32))
+                else:
+                    offset = float(loaded)
+            elif isinstance(raw_off, (int, float)):
+                offset = float(raw_off)
 
-        # return posterior_predictive_samples.transpose()
+        thin = self.sampler_config.get("thin", 1)
+        thin_idata = self.sampler_config.get("thin_idata", False)
+        eff_thin = 1 if thin_idata else thin
+        preds = predict_out_of_sample(self.idata, X_pred, offset, m_trees=self.M, thin=eff_thin)
+        return preds
     
     def bart_predict(
         self, 
@@ -298,7 +319,6 @@ class BartSurvModel():
         post_pred_mu_ = _sample_posterior(trees, pt_x, rng, size = size, shape=1)
         post_pred = pm.math.invprobit(post_pred_mu_ + self.offset).eval()
         post_pred = post_pred.reshape(post_pred.shape[0], post_pred.shape[1])
-        # print(post_pred.shape)
         post_pred = xr.DataArray(post_pred, name = "mu", 
                                     coords = {"sample":np.arange(0,post_pred.shape[0]),
                                             "p_obs": coords
@@ -459,7 +479,8 @@ class BartSurvModel():
             Dict[str, Union[int, float, Dict]]: Serialized Model config.
         """
         model_config = self.model_config.copy()
-        model_config["split_rules"] = [str(sp_rule) for sp_rule in model_config["split_rules"]]
+        if "split_rules" in model_config and model_config["split_rules"] is not None:
+            model_config["split_rules"] = [str(sp_rule) for sp_rule in model_config["split_rules"]]
         return model_config
 
     def _generate_and_preprocess_model_data(
@@ -537,26 +558,17 @@ def get_surv_pre_train(
         yt = np.ceil(y_time/time_scale).flatten()
     else:
         yt = y_time.flatten()
-    # t_sk = y_sk["Survival_in_days"]
-
     d_sk = np.array(y_status, dtype="int").flatten()
     t_uniq, t_inv = np.unique(yt, return_inverse=True)
-    t_wide = np.tile(t_uniq, (y_time.shape[0],1))
-    # print(t_wide.shape)
-    # print(t_wide)
-    d_wide = np.tile(np.zeros(t_uniq.shape[0]), (y_time.shape[0],1))
-    # print(d_wide.shape)
+    t_wide = np.tile(t_uniq, (y_time.shape[0], 1))
+    d_wide = np.tile(np.zeros(t_uniq.shape[0]), (y_time.shape[0], 1))
     max_t = yt.max()
-    # print(max_t)
 
-
-    # replace the time greater than t_sk. LOOP is over columns, so it should be fast with the exception of unscalled, many days
+    # replace the time greater than survival time.
     for i in np.arange(t_wide.shape[1]):
-        # print(yt)
-        # print(t_wide[t_wide[:,i]>yt,i])
-        t_wide[t_wide[:,i] > yt,i]=max_t + 1
-        d_wide[t_wide[:,i] == yt,i] = d_sk[t_wide[:,i]==yt]
-        d_wide[t_wide[:,i] > yt, i] = 2
+        t_wide[t_wide[:, i] > yt, i] = max_t + 1
+        d_wide[t_wide[:, i] == yt, i] = d_sk[t_wide[:, i] == yt]
+        d_wide[t_wide[:, i] > yt, i] = 2
     
     # time
     t_wide = t_wide.reshape(t_wide.shape[0]*t_wide.shape[1],1)
@@ -618,25 +630,127 @@ def get_posterior_test(
     return {"post_x": out, "coords":coords}
 
     
+def get_causal_pdp(
+    x: pd.DataFrame, 
+    primary_col: Union[str, int] = "inpatient", 
+    values: list = [0, 1],
+    audit_support: bool = True,
+    donor_seed: Optional[int] = 42
+) -> Tuple[np.ndarray, Dict, List[str]]:
+    """Generates counterfactual data for Causal G-Computation with support violation audit.
+    
+    Identifies dependent features or post-exposure mediators that have structural support
+    or positivity violations with the primary exposure (e.g., deterministic zeros like LOS=0
+    when Inpatient=0). Performs conditional donor resampling for dependent features while
+    leaving baseline confounders intact, strictly avoiding off-support extrapolation.
+    
+    Args:
+        x (pd.DataFrame): Baseline covariate dataframe.
+        primary_col (Union[str, int]): Primary exposure column name or index.
+        values (list, optional): Counterfactual intervention values. Defaults to [0, 1].
+        audit_support (bool, optional): Whether to audit and flag support violations. Defaults to True.
+        donor_seed (int, optional): Random seed for reproducible donor resampling. Defaults to 42.
+        
+    Returns:
+        Tuple[np.ndarray, Dict, List[str]]:
+            - out_sk: Stacked counterfactual covariate matrix.
+            - c_idx: Index coordinate dictionary compatible with get_posterior_test.
+            - dependent_features: List of audited features exhibiting support violations.
+    """
+    if isinstance(x, np.ndarray):
+        x = pd.DataFrame(x)
+    col_name = primary_col if isinstance(primary_col, str) else x.columns[primary_col]
+    a = x[col_name].values
+    dependent_features = []
+    
+    if audit_support and len(values) >= 2:
+        for col in x.columns:
+            if col == col_name:
+                continue
+            vals_0 = x.loc[a == values[0], col].values
+            vals_1 = x.loc[a == values[1], col].values
+            if len(vals_0) == 0 or len(vals_1) == 0:
+                continue
+            min_0, max_0 = np.min(vals_0), np.max(vals_0)
+            min_1, max_1 = np.min(vals_1), np.max(vals_1)
+            mass_0 = np.mean(vals_0 == 0)
+            mass_1 = np.mean(vals_1 == 0)
+            
+            range_violation = (min_1 < min_0) or (max_1 > max_0) or (min_0 < min_1) or (max_0 > max_1)
+            mass_violation = (mass_0 > 0.5 and mass_1 == 0) or (mass_1 > 0.5 and mass_0 == 0)
+            
+            if range_violation or mass_violation:
+                dependent_features.append(col)
+                warnings.warn(
+                    f"[Causal Audit] Covariate '{col}' violates conditional support with primary exposure '{col_name}'. "
+                    f"Re-routing '{col}' to Conditional G-Computation donor resampling to prevent off-support extrapolation.",
+                    UserWarning
+                )
+
+    rng = np.random.default_rng(donor_seed)
+    cf_dfs = []
+    for val in values:
+        x_cf = x.copy()
+        x_cf[col_name] = float(val)
+        for col in dependent_features:
+            donor_vals = x.loc[a == val, col].values
+            if len(donor_vals) > 0:
+                if np.all(donor_vals == 0):
+                    x_cf[col] = 0.0
+                else:
+                    target_mask = (a != val)
+                    if target_mask.sum() > 0:
+                        x_cf.loc[target_mask, col] = rng.choice(donor_vals, size=target_mask.sum(), replace=True)
+        cf_dfs.append(x_cf.values)
+        
+    s2 = len(values)
+    s3 = x.shape[0]
+    out_sk = np.vstack(cf_dfs)
+    c_idx = np.repeat(np.arange(s2), s3)
+    c_idx = np.unique(c_idx, return_index=True, return_counts=True, return_inverse=True)
+    c_idx = dict({"val": c_idx[0], "idx": c_idx[1], "coord": c_idx[2], "cnt": c_idx[3], "len": out_sk.shape[0]})
+    return out_sk, c_idx, dependent_features
+
+
 def get_pdp(
-    x:np.ndarray, 
-    var_col:List[int] = [], 
-    values:List[Union[int,float]] = [], 
-    qt:List[float] =[0.25,0.5,0.75], 
-    sample_n=None
-)->Union[np.ndarray, Dict]:
-    """Generates data for Partial Dependency Plots.
+    x: Union[np.ndarray, pd.DataFrame], 
+    var_col: List[Union[int, str]] = [], 
+    values: List[Union[int, float]] = [], 
+    qt: List[float] = [0.25, 0.5, 0.75], 
+    sample_n=None,
+    method: str = "marginal",
+    audit_support: bool = False
+) -> Union[Tuple[np.ndarray, Dict], Tuple[np.ndarray, Dict, List[str]]]:
+    """Generates data for Partial Dependency Plots or Causal G-Computation.
 
     Args:
-        x (np.ndarray): Covariate matrix.    
-        var_col (List[int], optional): Covariate column to generate pdp values. Defaults to [].
-        values (List[Union[int,float]], optional): Values to test on for each covariate. Defaults to [].
-        qt (List[float], optional): Quantiles to generate values on if non are given. Defaults to [0.25,0.5,0.75].
-        sample_n (_type_, optional): Sample size of large dataset. Useful for working with large datasets. Defaults to None.
+        x (Union[np.ndarray, pd.DataFrame]): Covariate matrix or DataFrame.    
+        var_col (List[Union[int, str]], optional): Covariate column to generate pdp values. Defaults to [].
+        values (List[Union[int, float]], optional): Values to test on for each covariate. Defaults to [].
+        qt (List[float], optional): Quantiles to generate values on if none are given. Defaults to [0.25, 0.5, 0.75].
+        sample_n (int, optional): Sample size of large dataset. Useful for working with large datasets. Defaults to None.
+        method (str, optional): 'marginal' for standard PDP, or 'causal' for support-audited G-Computation. Defaults to 'marginal'.
+        audit_support (bool, optional): If True, audits for positivity/support violations. Defaults to False.
 
     Returns:
-        Union[np.ndarray, Dict]: PDP covariate matrix and dictionary for tracking PDP components.
+        Union[Tuple[np.ndarray, Dict], Tuple[np.ndarray, Dict, List[str]]]: PDP covariate matrix and tracking dictionary.
     """
+    if method == "causal" or audit_support:
+        val_list = values[0] if (len(values) > 0 and values[0] is not None) else [0, 1]
+        primary = var_col[0] if len(var_col) > 0 else 0
+        return get_causal_pdp(x, primary_col=primary, values=val_list, audit_support=True)
+
+    if isinstance(x, pd.DataFrame):
+        # Resolve column names to integer indices if necessary
+        resolved_var_col = []
+        for v in var_col:
+            if isinstance(v, str):
+                resolved_var_col.append(x.columns.get_loc(v))
+            else:
+                resolved_var_col.append(int(v))
+        var_col = resolved_var_col
+        x = x.values
+
     if len(var_col) > 2:
         print("only upto 2 variables can be used at a time")
         pass
@@ -647,8 +761,8 @@ def get_pdp(
 
     var_vals = []
     for idx, var in enumerate(var_col):
-        if values[idx] is None:
-            val =np.quantile(x[:,var], qt)
+        if idx >= len(values) or values[idx] is None:
+            val = np.quantile(x[:,var], qt)
             var_vals.append(val)
         else:
             var_vals.append(values[idx])
@@ -691,31 +805,10 @@ def get_sv_prob(
         prob = post.reshape(-1, n.shape[0], k[0])
     sv = np.cumprod(1-prob, 2)
     return {
-        "prob":prob, 
-        "sv":sv
-        }
+        "prob": prob, 
+        "sv": sv
+    }
 
-# def get_sv_prob(
-#     post: Union[xr.DataArray, xr.Dataset]
-# )->Dict:
-#     """Generates the Survival Probability estimates for time points.
-
-#     Args:
-#         post (Union[xr.DataArray, xr.Dataset]): Posterior output.
-
-#     Returns:
-#         Dict: Risk Probability (Hazard) and Survival Probability for each draw, observation and time.
-#     """
-#     n,k = np.unique(post.p_obs.values, return_counts=True)
-#     if "Dataset" in str(post):
-#         prob = post.mu.values.reshape(-1, n.shape[0], k[0])
-#     else:
-#         prob = post.values.reshape(-1, n.shape[0], k[0])
-#     sv = np.cumprod(1-prob, 2)
-#     return {
-#         "prob":prob, 
-#         "sv":sv
-#         }
 
 def get_sv_mean_quant(
     sv: np.ndarray, 
@@ -735,28 +828,26 @@ def get_sv_mean_quant(
         Dict: Mask True mean, Mask True quantiles, Mask False mean, Mask False quantiles.
     """
     # binary mask means and quantiles
-    #tmask
-    sv_mt = sv[:,msk,:]
+    sv_mt = sv[:, msk, :]
     sv_mt_m = sv_mt.mean(axis=1) # mean per draw
     if draws:
-        sv_mt_q = np.quantile(sv_mt_m, qntile, axis = 0)
+        sv_mt_q = np.quantile(sv_mt_m, qntile, axis=0)
         sv_mt_m = sv_mt_m.mean(axis=0) # mean over draws
 
-    #fmask
-    sv_mf = sv[:,~msk,:]
+    sv_mf = sv[:, ~msk, :]
     sv_mf_m = sv_mf.mean(axis=1)
     if draws:
-        sv_mf_q = np.quantile(sv_mf_m, qntile, axis = 0)
+        sv_mf_q = np.quantile(sv_mf_m, qntile, axis=0)
         sv_mf_m = sv_mf_m.mean(axis=0)
 
     return {
-        "mt_m":sv_mt_m, 
-        "mt_q":sv_mt_q, 
-        "mf_m":sv_mf_m, 
-        "mf_q":sv_mf_q
+        "mt_m": sv_mt_m, 
+        "mt_q": sv_mt_q, 
+        "mf_m": sv_mf_m, 
+        "mf_q": sv_mf_q
     }
 
-# get diff metric 
+
 def pdp_diff_metric(
     pdp_val: Dict, 
     idx: np.ndarray, 
@@ -772,30 +863,70 @@ def pdp_diff_metric(
     Returns:
         Dict: Survival Probability Difference Mean, Survival Probability Difference Quantiles.
     """
-    diff = (pdp_val["sv"][:,:idx,:] - pdp_val["sv"][:,idx:,:]).mean(1) 
+    diff = (pdp_val["sv"][:, :idx, :] - pdp_val["sv"][:, idx:, :]).mean(1) 
     d_m = diff.mean(0)
     d_q = np.quantile(diff, qntile, axis=0)
-    return {"diff_m": np.round(d_m,3),
-             "diff_q": np.round(d_q,3)}
+    return {"diff_m": np.round(d_m, 3),
+            "diff_q": np.round(d_q, 3)}
+
 
 def pdp_rr_metric(
     pdp_val: Dict, 
-    idx:np.ndarray, 
-    qntile:list = [0.025, 0.975]
+    idx: np.ndarray, 
+    qntile: list = [0.025, 0.975]
 )->Dict:
     """Generates a Risk Ratio (Hazard Ratio) from pdp values.
 
     Args:
         pdp_val (Dict): Posterior of PDP predictions.
         idx (np.ndarray): Index of PDP sets.
-        qntile (list, optional): Quantile valeus for Credible Interval. Defaults to [0.025, 0.975].
+        qntile (list, optional): Quantile values for Credible Interval. Defaults to [0.025, 0.975].
 
     Returns:
         Dict: Risk Ratio Mean, Risk Ratio Quantiles.
     """
-    r = (pdp_val["prob"][:,idx:,:] / pdp_val["prob"][:,:idx,:]).mean(1) 
+    r = (pdp_val["prob"][:, idx:, :] / pdp_val["prob"][:, :idx, :]).mean(1) 
     r_m = r.mean(0)
     r_q = np.quantile(r, qntile, axis=0)
-    return {"rr_m": np.round(r_m,3), 
-            "rr_q":np.round(r_q,3)}
+    return {"rr_m": np.round(r_m, 3), 
+            "rr_q": np.round(r_q, 3)}
+
+
+# ==========================================
+# Modern API Aliases (100% Backward Compatible)
+# ==========================================
+SurvBART = BartSurvModel
+format_survival_data = get_surv_pre_train
+format_prediction_data = get_posterior_test
+compute_survival_curves = get_sv_prob
+compute_survival_quantiles = get_sv_mean_quant
+compute_pdp = get_pdp
+compute_causal_pdp = get_causal_pdp
+compute_pdp_difference = pdp_diff_metric
+compute_hazard_ratio = pdp_rr_metric
+
+__all__ = [
+    # Estimator
+    "SurvBART",
+    "BartSurvModel",
+    # Data transformation & pre-training
+    "format_survival_data",
+    "get_surv_pre_train",
+    "format_prediction_data",
+    "get_posterior_test",
+    # Survival curves & metrics
+    "compute_survival_curves",
+    "get_sv_prob",
+    "compute_survival_quantiles",
+    "get_sv_mean_quant",
+    # Partial dependence & causal g-computation
+    "compute_pdp",
+    "get_pdp",
+    "compute_causal_pdp",
+    "get_causal_pdp",
+    "compute_pdp_difference",
+    "pdp_diff_metric",
+    "compute_hazard_ratio",
+    "pdp_rr_metric",
+]
     

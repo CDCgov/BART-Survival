@@ -1,35 +1,73 @@
-# import arviz as az
-# import numpy as np
-# import scipy.stats as sp
-# import sksurv as sks
-# import sksurv.metrics as skm
-# import sksurv.linear_model
+"""
+bart_survival
+=============
+Bayesian Additive Regression Trees (BART) for Survival Analysis.
 
-# from pymc_experimental.model_builder import ModelBuilder
-# from typing import Dict, List, Optional, Tuple, Union, Any
-
-# from pathlib import Path
-# # import arviz as az
-# import pymc as pm
-# import pymc_bart as pmb
-# import xarray as xr
-# # import json
-# import scipy.stats as sp
-# import warnings
-# import pytensor.tensor as pt
-# from pymc_bart.utils import _sample_posterior
-# import cloudpickle as cpkl
-# # import pyspark.sql.functions as F
-# # import pyspark.sql.window as W
-# import sksurv as sks
-# from sksurv import nonparametric
-# from causalpy import pymc_experiments, pymc_models, skl_experiments, skl_models
-# from causalpy.version import __version__
-# from .data import load_data
+Provides high-performance MCMC sampling with DART sparsity selection,
+discrete-time probit hazard models, out-of-sample survival curves,
+and causal partial dependence (G-computation) auditing.
+"""
 
 from bart_survival.version import __version__
+from bart_survival import simulation
+from bart_survival import surv_bart
+from bart_survival.surv_bart import (
+    # Primary estimator
+    SurvBART,
+    BartSurvModel,
+    # Data transformation
+    format_survival_data,
+    get_surv_pre_train,
+    format_prediction_data,
+    get_posterior_test,
+    # Survival curves & metrics
+    compute_survival_curves,
+    get_sv_prob,
+    compute_survival_quantiles,
+    get_sv_mean_quant,
+    # Partial dependence & Causal G-Computation
+    compute_pdp,
+    get_pdp,
+    compute_causal_pdp,
+    get_causal_pdp,
+    compute_pdp_difference,
+    pdp_diff_metric,
+    compute_hazard_ratio,
+    pdp_rr_metric,
+)
+from bart_survival.bart_adj import (
+    FastSurvMHBART,
+    predict_out_of_sample,
+)
+
 __all__ = [
-    "surv_bart",
+    # Metadata & modules
+    "__version__",
     "simulation",
-    "__version__"
+    "surv_bart",
+    # Primary estimator
+    "SurvBART",
+    "BartSurvModel",
+    # Data transformation
+    "format_survival_data",
+    "get_surv_pre_train",
+    "format_prediction_data",
+    "get_posterior_test",
+    # Survival curves & metrics
+    "compute_survival_curves",
+    "get_sv_prob",
+    "compute_survival_quantiles",
+    "get_sv_mean_quant",
+    # Partial dependence & Causal G-Computation
+    "compute_pdp",
+    "get_pdp",
+    "compute_causal_pdp",
+    "get_causal_pdp",
+    "compute_pdp_difference",
+    "pdp_diff_metric",
+    "compute_hazard_ratio",
+    "pdp_rr_metric",
+    # Engine
+    "FastSurvMHBART",
+    "predict_out_of_sample",
 ]
