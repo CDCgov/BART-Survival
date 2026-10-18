@@ -1521,19 +1521,21 @@ def compute_hazard_and_risk_difference(
     sv = pdp_val["sv"]
     n_times = prob.shape[2]
 
-    # Population marginal hazards per draw across subjects
-    h0 = np.clip(prob[:, :idx, :].mean(axis=1), eps, 1.0 - eps)
-    h1 = np.clip(prob[:, idx:, :].mean(axis=1), eps, 1.0 - eps)
+    safe_eps = max(eps, 1e-4)
+    h0 = np.clip(prob[:, :idx, :].mean(axis=1), safe_eps, 1.0 - safe_eps)
+    h1 = np.clip(prob[:, idx:, :].mean(axis=1), safe_eps, 1.0 - safe_eps)
 
     # Population marginal survival per draw across subjects
     s0 = sv[:, :idx, :].mean(axis=1)
     s1 = sv[:, idx:, :].mean(axis=1)
 
     # 1. Time-varying Hazard Ratio via cloglog link: log(1 - h1) / log(1 - h0)
-    hr_by_time = np.clip(np.log(1.0 - h1) / np.log(1.0 - h0), 1e-4, 1e4)
+    hr_raw = -np.log(1.0 - h1) / -np.log(1.0 - h0)
+    hr_by_time = np.clip(np.nan_to_num(hr_raw, nan=1.0, posinf=50.0, neginf=0.02), 0.02, 50.0)
 
     # 2. Time-varying raw discrete risk ratio: h1 / h0 (not averaged across time)
-    discrete_rr_by_time = np.clip(h1 / h0, 1e-4, 1e4)
+    discrete_raw = h1 / h0
+    discrete_rr_by_time = np.clip(np.nan_to_num(discrete_raw, nan=1.0, posinf=50.0, neginf=0.02), 0.02, 50.0)
 
     # Interval event weights
     if event_weights is None:
