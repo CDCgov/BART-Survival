@@ -52,7 +52,7 @@ class BartSurvModel:
         chains: int = 4,
         cores: Optional[int] = None,
         thin: int = 10,
-        thin_idata: bool = True,
+        thin_idata: bool = False,
         use_sparsity: bool = False,
         split_method: str = "empirical",
         max_cutpoints: int = 512,
@@ -77,7 +77,7 @@ class BartSurvModel:
             chains (int, optional): Number of parallel Markov chains. Defaults to 4.
             cores (Optional[int], optional): Number of CPU processes. Defaults to min(chains, cpu_count).
             thin (int, optional): Thinning interval for posterior draws. Defaults to 10.
-            thin_idata (bool, optional): If True, retains only thinned samples in idata to save memory. Defaults to True.
+            thin_idata (bool, optional): Legacy flag; thinning is applied safely after reshaping tree arrays. Defaults to False.
             use_sparsity (bool, optional): Whether to enable DART Dirichlet sparsity. Defaults to False.
             split_method (str, optional): Strategy for proposing split cutpoints ('empirical' or 'uniform').
                 'empirical' evaluates unique midpoints up to max_cutpoints. Defaults to 'empirical'.
@@ -168,7 +168,7 @@ class BartSurvModel:
             tune=1000,
             chains=4,
             thin=10,
-            thin_idata=True,
+            thin_idata=False,
             update_fraction=1.0,
             use_sparsity=False,
             split_method="empirical",
@@ -190,7 +190,7 @@ class BartSurvModel:
             tune=250,
             chains=2,
             thin=5,
-            thin_idata=True,
+            thin_idata=False,
             update_fraction=1.0,
             use_sparsity=False,
             split_method="empirical",
@@ -207,7 +207,7 @@ class BartSurvModel:
             tune=2000,
             chains=4,
             thin=10,
-            thin_idata=True,
+            thin_idata=False,
             update_fraction=1.0,
             use_sparsity=False,
             split_method="empirical",
@@ -314,8 +314,6 @@ class BartSurvModel:
             import os
             cpu_cnt = os.cpu_count() or 4
             cores = min(chains, max(1, cpu_cnt))
-        thin = int(self.sampler_config.get("thin", 10))
-        thin_idata = bool(self.sampler_config.get("thin_idata", True))
 
         with self.model:
             sampler_args = {**self.sampler_config, **kwargs}
@@ -330,8 +328,10 @@ class BartSurvModel:
                 progressbar=pbar,
                 discard_tuned_samples=True
             )
-        if thin > 1 and thin_idata:
-            idata = idata.sel(draw=slice(None, None, thin))
+        # Note: Do NOT slice idata along `draw` directly because PyMC flattens 2D step stats
+        # (F_trees, T_trees, L_trees, R_trees, V_trees) of shape (m_trees, max_nodes) along `draw`,
+        # making the sample_stats `draw` dimension length `draws * m_trees`.
+        # Thinning is applied cleanly after reshaping to (n_samples_raw, m_trees, max_nodes) in predict_out_of_sample.
         idata = self.set_idata_attrs(idata)
         return idata
 
@@ -451,10 +451,8 @@ class BartSurvModel:
             elif isinstance(raw_off, (int, float)):
                 offset = float(raw_off)
 
-        thin = self.sampler_config.get("thin", 1)
-        thin_idata = self.sampler_config.get("thin_idata", False)
-        eff_thin = 1 if thin_idata else thin
-        preds = predict_out_of_sample(self.idata, X_pred, offset, m_trees=self.M, thin=eff_thin)
+        thin = int(self.sampler_config.get("thin", 1))
+        preds = predict_out_of_sample(self.idata, X_pred, offset, m_trees=self.M, thin=thin)
         return preds
 
     def predict(
@@ -969,7 +967,7 @@ class BartSurvModel:
             "chains": 4,
             "cores": None,
             "thin": 10,
-            "thin_idata": True,
+            "thin_idata": False,
             "update_fraction": 1.0,
             "min_node_size": 5,
             "k": 2.0,

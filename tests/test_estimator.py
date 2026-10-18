@@ -22,7 +22,7 @@ def test_estimator_initialization_and_presets():
     assert model.tune == 1000
     assert model.chains == 4
     assert model.thin == 10
-    assert model.thin_idata is True
+    assert model.thin_idata is False
     assert model.use_sparsity is False
     assert model.update_fraction == 1.0
     assert model.split_method == "empirical"
