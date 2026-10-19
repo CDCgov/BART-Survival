@@ -7,15 +7,15 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API &mdash; BART-Survival  documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=5929fcd5"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -50,14 +50,9 @@
 <li class="toctree-l2"><a class="reference internal" href="simulation.html">simulation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="paper_full.html">Summary</a></li>
-<li class="toctree-l1"><a class="reference internal" href="paper_full.html#statement-of-need">Statement of need</a></li>
-<li class="toctree-l1"><a class="reference internal" href="paper_full.html#methods">Methods</a></li>
-<li class="toctree-l1"><a class="reference internal" href="paper_full.html#demonstration">Demonstration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="paper_full.html#conclusion">Conclusion</a></li>
-<li class="toctree-l1"><a class="reference internal" href="paper_full.html#acknowledgements">Acknowledgements</a></li>
-<li class="toctree-l1"><a class="reference internal" href="paper_full.html#references">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="methods.html">Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demonstration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples Notebooks</a></li>
 </ul>
 
         </div>
@@ -89,32 +84,61 @@
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="surv_bart.html">surv_bart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart-survival-surv-bart">bart_survival.surv_bart</a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel"><code class="docutils literal notranslate"><span class="pre">BartSurvModel</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.bart_predict"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.bart_predict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.build_model"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.build_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.close"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.close()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.estimate_effect"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.estimate_effect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.feature_importance"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.feature_importance()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.fit"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.fit_survival"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.fit_survival()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.get_default_model_config"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.get_default_model_config()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.get_default_sampler_config"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.get_default_sampler_config()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.id"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.id</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.load"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.load()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.predict"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.predict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.predict_survival"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.predict_survival()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.preset_default"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.preset_default()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.preset_fast"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.preset_fast()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.preset_high_precision"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.preset_high_precision()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.preset_production"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.preset_production()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.preset_standard"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.preset_standard()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.sample_model"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.sample_model()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.sample_posterior_predictive"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.sample_posterior_predictive()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.save"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.save()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.BartSurvModel.set_idata_attrs"><code class="docutils literal notranslate"><span class="pre">BartSurvModel.set_idata_attrs()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.SurvBART"><code class="docutils literal notranslate"><span class="pre">SurvBART</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_causal_pdp"><code class="docutils literal notranslate"><span class="pre">compute_causal_pdp()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_hazard_and_risk_difference"><code class="docutils literal notranslate"><span class="pre">compute_hazard_and_risk_difference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_hazard_ratio"><code class="docutils literal notranslate"><span class="pre">compute_hazard_ratio()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_pdp"><code class="docutils literal notranslate"><span class="pre">compute_pdp()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_pdp_difference"><code class="docutils literal notranslate"><span class="pre">compute_pdp_difference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_shift_pdp"><code class="docutils literal notranslate"><span class="pre">compute_shift_pdp()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_survival_curves"><code class="docutils literal notranslate"><span class="pre">compute_survival_curves()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.compute_survival_quantiles"><code class="docutils literal notranslate"><span class="pre">compute_survival_quantiles()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.format_prediction_data"><code class="docutils literal notranslate"><span class="pre">format_prediction_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.format_survival_data"><code class="docutils literal notranslate"><span class="pre">format_survival_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.get_causal_pdp"><code class="docutils literal notranslate"><span class="pre">get_causal_pdp()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.get_pdp"><code class="docutils literal notranslate"><span class="pre">get_pdp()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.get_posterior_test"><code class="docutils literal notranslate"><span class="pre">get_posterior_test()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.get_shift_pdp"><code class="docutils literal notranslate"><span class="pre">get_shift_pdp()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.get_surv_pre_train"><code class="docutils literal notranslate"><span class="pre">get_surv_pre_train()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.get_sv_mean_quant"><code class="docutils literal notranslate"><span class="pre">get_sv_mean_quant()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.get_sv_prob"><code class="docutils literal notranslate"><span class="pre">get_sv_prob()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.pdp_diff_metric"><code class="docutils literal notranslate"><span class="pre">pdp_diff_metric()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.pdp_hr_rd_metric"><code class="docutils literal notranslate"><span class="pre">pdp_hr_rd_metric()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="surv_bart.html#bart_survival.surv_bart.pdp_rr_metric"><code class="docutils literal notranslate"><span class="pre">pdp_rr_metric()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="simulation.html">simulation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simulation.html#bart-survival-simulation">bart_survival.simulation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="simulation.html#bart_survival.simulation.check_inputs"><code class="docutils literal notranslate"><span class="pre">check_inputs()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="simulation.html#bart_survival.simulation.get_x_matrix"><code class="docutils literal notranslate"><span class="pre">get_x_matrix()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="simulation.html#bart_survival.simulation.inverse_weibull_survival"><code class="docutils literal notranslate"><span class="pre">inverse_weibull_survival()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="simulation.html#bart_survival.simulation.simulate_confounded_survival_data"><code class="docutils literal notranslate"><span class="pre">simulate_confounded_survival_data()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="simulation.html#bart_survival.simulation.simulate_survival"><code class="docutils literal notranslate"><span class="pre">simulate_survival()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="simulation.html#bart_survival.simulation.weibull_hazard"><code class="docutils literal notranslate"><span class="pre">weibull_hazard()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="simulation.html#bart_survival.simulation.weibull_survival"><code class="docutils literal notranslate"><span class="pre">weibull_survival()</span></code></a></li>
