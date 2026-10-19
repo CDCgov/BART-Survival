@@ -163,11 +163,11 @@ class BartSurvModel:
 
     @classmethod
     def preset_production(cls, **overrides: Any) -> "BartSurvModel":
-        """Production preset: 50 trees, 2500 draws, 1000 tune, 4 chains, thin 10, update_fraction 1.0, empirical cutpoints."""
+        """Production preset: 50 trees, 2500 draws, 250 tune, 4 chains, thin 10, update_fraction 1.0, empirical cutpoints."""
         cfg: Dict[str, Any] = dict(
             trees=50,
             draws=2500,
-            tune=1000,
+            tune=250,
             chains=4,
             thin=10,
             thin_idata=False,
@@ -185,12 +185,12 @@ class BartSurvModel:
 
     @classmethod
     def preset_fast(cls, **overrides: Any) -> "BartSurvModel":
-        """Fast exploration preset: 20 trees, 500 draws, 250 tune, 2 chains, thin 5, update_fraction 1.0."""
+        """Fast exploration preset: 25 trees, 500 draws, 250 tune, 4 chains, thin 5, update_fraction 1.0."""
         cfg: Dict[str, Any] = dict(
-            trees=20,
+            trees=25,
             draws=500,
             tune=250,
-            chains=2,
+            chains=4,
             thin=5,
             thin_idata=False,
             update_fraction=1.0,
