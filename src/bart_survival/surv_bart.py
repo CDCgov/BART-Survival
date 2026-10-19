@@ -162,14 +162,14 @@ class BartSurvModel:
         self.event_weights_: Optional[np.ndarray] = None
 
     @classmethod
-    def preset_production(cls, **overrides: Any) -> "BartSurvModel":
-        """Production preset: 50 trees, 2500 draws, 250 tune, 4 chains, thin 10, update_fraction 1.0, empirical cutpoints."""
+    def preset_standard(cls, **overrides: Any) -> "BartSurvModel":
+        """Standard scientific preset: 50 trees, 1,000 draws, 250 tune, 4 chains, thin 4 (1,000 final draws), update_fraction 1.0, empirical cutpoints."""
         cfg: Dict[str, Any] = dict(
             trees=50,
-            draws=2500,
+            draws=1000,
             tune=250,
             chains=4,
-            thin=10,
+            thin=4,
             thin_idata=False,
             update_fraction=1.0,
             use_sparsity=False,
@@ -179,9 +179,14 @@ class BartSurvModel:
         return cls(**cfg)
 
     @classmethod
+    def preset_production(cls, **overrides: Any) -> "BartSurvModel":
+        """Legacy alias for preset_standard."""
+        return cls.preset_standard(**overrides)
+
+    @classmethod
     def preset_default(cls, **overrides: Any) -> "BartSurvModel":
-        """Default recommended preset (alias for preset_production)."""
-        return cls.preset_production(**overrides)
+        """Default recommended preset (alias for preset_standard)."""
+        return cls.preset_standard(**overrides)
 
     @classmethod
     def preset_fast(cls, **overrides: Any) -> "BartSurvModel":

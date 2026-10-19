@@ -9,7 +9,7 @@
 ### Key Highlights (2026 Release)
 
 - **Intuitive High-Level API (`SurvBART`)**: End-to-end scikit-learn compatible workflow with `fit_survival()`, `predict_survival()`, `feature_importance()`, and `estimate_effect()`.
-- **Standardized Production Presets**: Battle-tested presets (`preset_production()`, `preset_fast()`, `preset_high_precision()`) calibrated for MCMC stability and rapid prototyping.
+- **Standardized Model Presets**: Battle-tested presets (`preset_standard()`, `preset_fast()`, `preset_high_precision()`) calibrated for MCMC stability and rapid prototyping.
 - **Empirical Node Value Splitting**: Proposes tree split cutpoints at exact empirical midpoints (up to 512 candidates per feature), capturing step-function risk dynamics with high fidelity.
 - **Support-Audited Causal G-Computation**: Automated detection of conditional support and positivity violations (e.g., zero length-of-stay for outpatients) with conditional donor resampling to eliminate off-support extrapolation.
 - **Warm-Started DART Dirichlet Sparsity**: Optional variable selection prior to identify true risk drivers in high-dimensional tabular cohorts.
@@ -54,9 +54,9 @@ df, meta = simulate_confounded_survival_data(
 feature_cols = ["inpatient", "age", "stage", "los"]
 X = df[feature_cols]
 
-# 2. Initialize SurvBART with production preset
-# (50 trees, 2500 draws, 1000 tune, 4 chains, thin=10, empirical 512 cutpoints)
-model = SurvBART.preset_production()
+# 2. Initialize SurvBART with standard scientific preset
+# (50 trees, 1000 draws, 250 tune, 4 chains, thin=4, empirical 512 cutpoints)
+model = SurvBART.preset_standard()
 
 # 3. Fit directly from tabular covariates and time-to-event outcomes
 model.fit_survival(
@@ -107,8 +107,8 @@ print("Age +5yr Risk Difference:  ", shift_res["risk_difference_horizon_mean"])
 
 | Preset | Trees | Draws | Tune | Chains | Thin | Update Fraction | Use Case |
 |---|---|---|---|---|---|---|---|
-| `preset_production()` *(Default)* | 50 | 2500 | 1000 | 4 | 10 | 1.0 (100%) | Final study models, publication-grade convergence |
-| `preset_fast()` | 20 | 500 | 250 | 2 | 5 | 1.0 (100%) | Fast exploration, interactive debugging, prototyping |
+| `preset_standard()` *(Default)* | 50 | 1000 | 250 | 4 | 4 (1,000 final) | 1.0 (100%) | Standard scientific benchmark models, publication-grade convergence |
+| `preset_fast()` | 25 | 500 | 250 | 4 | 5 (400 final) | 1.0 (100%) | Fast exploration, interactive debugging, prototyping |
 | `preset_high_precision()` | 100 | 5000 | 2000 | 4 | 10 | 1.0 (100%) | High-dimensional data, complex multi-way interactions |
 
 ```python

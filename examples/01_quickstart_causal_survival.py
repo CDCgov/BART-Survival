@@ -40,8 +40,8 @@ def main():
 
     # 2. Initialize SurvBART with fast preset for rapid execution
     print("\n[2] Initializing SurvBART model...")
-    # For production analyses, use SurvBART.preset_production() (50 trees, 2500 draws, 4 chains)
-    # Here we use preset_fast with 20 trees and 500 draws for demonstration
+    # For full scientific analyses, use SurvBART.preset_standard() (50 trees, 1000 draws, 250 tune, 4 chains, thin=4)
+    # Here we use preset_fast with 25 trees and 500 draws for demonstration
     model = SurvBART.preset_fast(
         trees=20,
         draws=500,

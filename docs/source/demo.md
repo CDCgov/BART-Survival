@@ -24,9 +24,9 @@ df, meta = simulate_confounded_survival_data(
 features = ["inpatient", "age", "stage", "los"]
 X = df[features]
 
-# 1. Initialize SurvBART using the recommended production preset
-# (50 trees, 2500 draws, 1000 tune, 4 chains, thin=10, 512 empirical cutpoints)
-model = SurvBART.preset_production()
+# 1. Initialize SurvBART using the recommended standard scientific preset
+# (50 trees, 1000 draws, 250 tune, 4 chains, thin=4, 512 empirical cutpoints)
+model = SurvBART.preset_standard()
 
 # 2. Fit directly from tabular covariates and survival outcomes
 model.fit_survival(
