@@ -253,20 +253,24 @@ def weibull_survival(
 
 def simulate_confounded_survival_data(
     N: int = 500,
-    treatment_hr: float = 2.0,
+    inpatient_hr: Optional[float] = None,
     censoring_rate: float = 0.25,
     include_support_violation: bool = True,
     n_noise_features: int = 5,
     seed: Optional[int] = 42,
+    print_summary: bool = True,
+    **kwargs: Any,
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """Generates a realistic synthetic survival dataset for benchmarking and testing.
 
     Models a clinical scenario with:
     - Baseline confounders: 'age' (continuous) and 'stage' (ordinal 1, 2, 3).
     - Primary exposure: 'inpatient' (binary 0/1) assigned via logistic propensity.
-    - Structural positivity/support violator: 'los' (Length of Stay).
+    - Structural positivity/support violator & mediator: 'los' (Length of Stay).
       If include_support_violation is True, P(los > 0 | inpatient = 0) = 0 deterministically,
       creating an off-support boundary that challenges naive PDP and requires Causal G-Computation.
+      Because LOS is caused by hospitalization and increases mortality risk, assigning inpatient
+      status incurs both a direct effect (inpatient_hr) and an indirect mediated effect via LOS.
     - Noise features: Uninformative continuous variables to benchmark DART feature selection.
     - Right-censoring: Exponential uninformative censoring calibrated to target censoring_rate.
 
@@ -274,17 +278,24 @@ def simulate_confounded_survival_data(
 
     Args:
         N (int, optional): Cohort sample size. Defaults to 500.
-        treatment_hr (float, optional): Ground-truth hazard ratio for primary exposure. Defaults to 2.0.
+        inpatient_hr (Optional[float], optional): Ground-truth conditional direct hazard ratio for
+            primary exposure ('inpatient'). Defaults to 2.0. (Alias 'treatment_hr' supported).
         censoring_rate (float, optional): Target proportion of right-censored subjects. Defaults to 0.25.
         include_support_violation (bool, optional): If True, induces structural zero LOS for outpatients. Defaults to True.
         n_noise_features (int, optional): Number of uninformative noise features for DART testing. Defaults to 5.
         seed (Optional[int], optional): Random seed for reproducibility. Defaults to 42.
+        print_summary (bool, optional): If True, prints precalculated expected direct, total, and marginal HRs. Defaults to True.
+        **kwargs: Backward compatibility options (e.g. treatment_hr).
 
     Returns:
         Tuple[pd.DataFrame, Dict[str, Any]]:
             - df: DataFrame containing ['time', 'status', 'inpatient', 'los', 'age', 'stage'] + noise columns.
-            - meta: Metadata dictionary with true parameters, column categories, and true HR.
+            - meta: Metadata dictionary with true parameters, column categories, direct HR, expected total HR,
+              and expected marginal HR.
     """
+    if inpatient_hr is None:
+        inpatient_hr = float(kwargs.get("treatment_hr", 2.0))
+
     rng = np.random.default_rng(seed)
 
     # 1. Baseline confounders
@@ -313,20 +324,65 @@ def simulate_confounded_survival_data(
 
     # 5. True Survival Time Generation
     # Under proportional hazards: lambda_i = exp(beta0 - log(HR)*inpatient - beta_cov * X)
-    beta_treat = np.log(treatment_hr)
+    beta_treat = np.log(inpatient_hr)
     beta_age = 0.02
     beta_stage = 0.25
-    beta_los = 0.04
+    beta_los = 0.04 if include_support_violation else 0.0
 
     base_log_scale = 3.6
-    log_scale = base_log_scale - beta_treat * inpatient - beta_age * (age - 60.0) - beta_stage * (stage - 1) - beta_los * np.maximum(0.0, los - 2.0)
+    log_scale = (
+        base_log_scale 
+        - beta_treat * inpatient 
+        - beta_age * (age - 60.0) 
+        - beta_stage * (stage - 1) 
+        - beta_los * np.maximum(0.0, los - 2.0)
+    )
     scale = np.exp(log_scale)
     shape = np.ones(N, dtype=np.float64)  # Exponential baseline hazard (shape=1)
 
     u_draws = rng.uniform(0.001, 0.999, size=N)
     t_latent = inverse_weibull_survival(scale=scale, shape=shape, u=u_draws).flatten()
 
-    # 6. Right-censoring mechanism
+    # 6. Precalculate Expected Causal Hazard Ratios (Direct, Total, and Population Marginal)
+    log_scale_0 = base_log_scale - beta_age * (age - 60.0) - beta_stage * (stage - 1)
+    h0_ind = np.exp(-log_scale_0)
+
+    if include_support_violation:
+        mc_rng = np.random.default_rng(999)
+        mc_los = mc_rng.gamma(shape=2.5, scale=2.0, size=50000) + 1.0
+        los_multiplier = float(np.mean(np.exp(beta_los * np.maximum(0.0, mc_los - 2.0))))
+        inpat_idx = np.where(inpatient == 1)[0]
+        cf_los_1 = rng.choice(los[inpat_idx], size=N, replace=True) if len(inpat_idx) > 0 else mc_los[:N]
+    else:
+        los_multiplier = 1.0
+        cf_los_1 = los
+
+    expected_total_causal_hr = float(inpatient_hr * los_multiplier)
+    log_scale_1 = (
+        base_log_scale
+        - beta_treat
+        - beta_age * (age - 60.0)
+        - beta_stage * (stage - 1)
+        - beta_los * np.maximum(0.0, cf_los_1 - 2.0)
+    )
+    h1_ind = np.exp(-log_scale_1)
+
+    # Discretized population marginal survival and hazard ratio across follow-up intervals
+    max_eval_time = float(np.percentile(t_latent, 90))
+    eval_times = np.linspace(max(1.0, max_eval_time / 10.0), max_eval_time, 10)
+    s0_marg = np.array([np.mean(np.exp(-h0_ind * t)) for t in eval_times])
+    s1_marg = np.array([np.mean(np.exp(-h1_ind * t)) for t in eval_times])
+
+    s0_prev = np.concatenate(([1.0], s0_marg[:-1]))
+    s1_prev = np.concatenate(([1.0], s1_marg[:-1]))
+
+    h0_interval = np.clip((s0_prev - s0_marg) / np.maximum(s0_prev, 1e-6), 1e-6, 1.0 - 1e-6)
+    h1_interval = np.clip((s1_prev - s1_marg) / np.maximum(s1_prev, 1e-6), 1e-6, 1.0 - 1e-6)
+
+    hr_cloglog_intervals = -np.log(1.0 - h1_interval) / -np.log(1.0 - h0_interval)
+    expected_marginal_hr = float(np.exp(np.mean(np.log(hr_cloglog_intervals))))
+
+    # 7. Right-censoring mechanism
     if censoring_rate > 0:
         cens_mult = (1.0 - censoring_rate) / censoring_rate
         c_times = rng.exponential(scale=scale.mean() * cens_mult, size=N)
@@ -336,6 +392,17 @@ def simulate_confounded_survival_data(
     else:
         obs_time = np.ceil(t_latent)
         status = np.ones(N, dtype=int)
+
+    if print_summary:
+        print("=" * 68)
+        print(f"[simulate_confounded_survival_data] Synthetic Cohort Generated (N={N}):")
+        print(f"  • Direct Inpatient HR (inpatient_hr):        {inpatient_hr:.2f}")
+        if include_support_violation:
+            print(f"  • Mediated LOS Hazard Multiplier:           {los_multiplier:.2f}x (via positive LOS)")
+            print(f"  • Expected Total Causal HR (Direct + LOS):  {expected_total_causal_hr:.2f}")
+        print(f"  • Expected Population Marginal HR:          {expected_marginal_hr:.2f}")
+        print(f"  • Censoring Rate:                           {float(1.0 - status.mean()):.1%}")
+        print("=" * 68)
 
     # Construct DataFrame
     data: Dict[str, Any] = {
@@ -352,7 +419,12 @@ def simulate_confounded_survival_data(
 
     feature_cols = ["inpatient", "los", "age", "stage", "biomarker"] + list(noise_dict.keys())
     meta: Dict[str, Any] = {
-        "true_hazard_ratio": treatment_hr,
+        "inpatient_hr": inpatient_hr,
+        "direct_inpatient_hr": inpatient_hr,
+        "true_hazard_ratio": inpatient_hr,  # legacy backward compatibility
+        "los_hazard_multiplier": round(los_multiplier, 3),
+        "expected_total_causal_hr": round(expected_total_causal_hr, 3),
+        "expected_marginal_hr": round(expected_marginal_hr, 3),
         "treatment_column": "inpatient",
         "support_violation_column": "los" if include_support_violation else None,
         "confounder_columns": ["age", "stage", "biomarker"],

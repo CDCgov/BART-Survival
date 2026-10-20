@@ -101,6 +101,10 @@ def test_estimator_convenience_methods():
 
     # 4. Test estimate_effect() on binary exposure
     effect = model.estimate_effect(X, primary_col="inpatient", values=[0, 1])
+    assert "total_marginal_hr" in effect
+    assert "total_conditional_hr" in effect
+    assert "total_marginal_hr_ci" in effect
+    assert "total_conditional_hr_ci" in effect
     assert "hazard_ratio_weighted_mean" in effect
     assert "hazard_ratio_unweighted_mean" in effect
     assert "hazard_ratio_curve_mean" in effect
@@ -118,6 +122,8 @@ def test_estimator_convenience_methods():
     cont_effect = model.estimate_effect(X, primary_col="age", delta=5.0)
     assert cont_effect["variable_type"] == "continuous_shift"
     assert cont_effect["delta"] == 5.0
+    assert "total_marginal_hr" in cont_effect
+    assert "total_conditional_hr" in cont_effect
     assert "hazard_ratio_weighted_mean" in cont_effect
     assert "hazard_ratio_unweighted_mean" in cont_effect
     assert "risk_difference_mean" in cont_effect

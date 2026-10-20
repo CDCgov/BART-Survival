@@ -47,7 +47,7 @@ from bart_survival import SurvBART, simulate_confounded_survival_data
 # 1. Generate realistic synthetic cohort with known ground-truth treatment effect
 df, meta = simulate_confounded_survival_data(
     N=400, 
-    treatment_hr=1.75, 
+    inpatient_hr=1.75, 
     censoring_rate=0.25, 
     seed=42
 )
@@ -84,10 +84,12 @@ causal_res = model.estimate_effect(
     primary_col="inpatient", 
     values=[0, 1]
 )
-print("\nEvent-Weighted Summary HR:", causal_res["hazard_ratio_weighted_mean"])
-print("95% Credible Interval:     ", causal_res["hazard_ratio_weighted_ci"])
-print("Horizon Risk Difference:   ", causal_res["risk_difference_horizon_mean"])
-print("Flagged Support Violations:", causal_res["flagged_support_violations"])
+print("\nTotal Marginal HR (Policy Effect):     ", causal_res["total_marginal_hr"])
+print("95% Credible Interval:                  ", causal_res["total_marginal_hr_ci"])
+print("Total Conditional HR (Subject Effect):  ", causal_res["total_conditional_hr"])
+print("95% Credible Interval:                  ", causal_res["total_conditional_hr_ci"])
+print("Horizon Risk Difference:                ", causal_res["risk_difference_horizon_mean"])
+print("Flagged Support Violations:             ", causal_res["flagged_support_violations"])
 
 # 7. Continuous Shift Intervention (Modified Treatment Policy: Xi -> Xi + delta)
 shift_res = model.estimate_effect(
@@ -95,8 +97,9 @@ shift_res = model.estimate_effect(
     primary_col="age",
     delta=5.0  # Shift everyone's age by +5 years
 )
-print("\nAge +5yr Shift Summary HR: ", shift_res["hazard_ratio_weighted_mean"])
-print("Age +5yr Risk Difference:  ", shift_res["risk_difference_horizon_mean"])
+print("\nAge +5yr Shift Marginal HR:    ", shift_res["total_marginal_hr"])
+print("Age +5yr Shift Conditional HR: ", shift_res["total_conditional_hr"])
+print("Age +5yr Risk Difference:      ", shift_res["risk_difference_horizon_mean"])
 ```
 
 ---

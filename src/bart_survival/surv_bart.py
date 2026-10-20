@@ -44,7 +44,7 @@ class BartSurvModel:
     cutpoints (512 resolution), MCMC thinning, and support-audited Causal G-Computation.
     """
     _model_type = "BART_Survival"
-    version = "0.2.2"
+    version = "0.2.3"
 
     def __init__(
         self,
@@ -190,12 +190,12 @@ class BartSurvModel:
 
     @classmethod
     def preset_fast(cls, **overrides: Any) -> "BartSurvModel":
-        """Fast exploration preset: 25 trees, 500 draws, 250 tune, 4 chains, thin 5, update_fraction 1.0."""
+        """Fast exploration preset: 20 trees, 500 draws, 250 tune, 2 chains, thin 5, update_fraction 1.0."""
         cfg: Dict[str, Any] = dict(
-            trees=25,
+            trees=20,
             draws=500,
             tune=250,
-            chains=4,
+            chains=2,
             thin=5,
             thin_idata=False,
             update_fraction=1.0,
@@ -701,15 +701,14 @@ class BartSurvModel:
            explicit values=[v0, v1] are supplied.
 
         Metrics computed:
-        - Event-weighted summary Hazard Ratio (default, Cox-aligned via complementary log-log link).
-        - Unweighted summary Hazard Ratio across follow-up intervals.
-        - Time-varying Hazard Ratio curve HR(t) via complementary log-log link.
-        - Time-varying discrete risk ratio curve RR_discrete(t) = h1(t) / h0(t) (not averaged).
-        - Time-varying Risk Difference curve RD(t) = Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t) (1 over 0).
+        - Total Marginal Hazard Ratio ('total_marginal_hr'): Event-weighted population-level policy contrast.
+        - Total Conditional Hazard Ratio ('total_conditional_hr'): Event-weighted subject-specific individual contrast.
+        - Time-varying Marginal and Conditional Hazard Ratio curves.
+        - Time-varying discrete risk ratio curve RR_discrete(t) = h1(t) / h0(t).
+        - Time-varying Risk Difference curve RD(t) = Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t).
         - Survival Difference curve S_1(t) - S_0(t) = -RD(t).
         - Event-weighted and unweighted summary Risk Differences.
-        - Final horizon Risk Difference RD(t_end).
-        - Restricted Mean Survival Time (RMST) difference.
+        - Final horizon Risk Difference RD(t_end) and Restricted Mean Survival Time (RMST) difference.
 
         Args:
             X (Union[np.ndarray, pd.DataFrame]): Baseline cohort covariates.
@@ -1536,16 +1535,13 @@ def compute_hazard_and_risk_difference(
 
     Contrasts Intervention Arm 1 (obs >= idx) over Reference Arm 0 (obs < idx).
 
-    Calculates:
-    - Event-weighted summary Hazard Ratio (default, Cox-aligned via complementary log-log link).
-    - Unweighted summary Hazard Ratio across follow-up intervals.
-    - Time-varying Hazard Ratio curve HR(t) via complementary log-log link.
-    - Time-varying discrete risk ratio curve RR_discrete(t) = h1(t) / h0(t) (not averaged).
-    - Time-varying Risk Difference curve RD(t) = Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t) (1 over 0).
+    Calculates both:
+    - Total Marginal Hazard Ratio (population-level policy contrast via complementary log-log link).
+    - Total Conditional Hazard Ratio (subject-specific individual contrast averaged across the cohort).
+    - Time-varying Marginal and Conditional Hazard Ratio curves.
+    - Time-varying Risk Difference curve RD(t) = Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t).
     - Survival Difference curve S_1(t) - S_0(t) = -RD(t).
-    - Event-weighted and unweighted summary Risk Differences.
-    - Final horizon Risk Difference RD(t_end).
-    - Restricted Mean Survival Time (RMST) difference.
+    - Final horizon Risk Difference RD(t_end) and Restricted Mean Survival Time (RMST) difference.
 
     Args:
         pdp_val (Dict[str, np.ndarray]): Dictionary containing 'prob' (hazards) and 'sv' (survival curves).
@@ -1564,18 +1560,30 @@ def compute_hazard_and_risk_difference(
     n_times = prob.shape[2]
 
     safe_eps = max(eps, 1e-4)
+
+    # 1. Marginal population hazards and Marginal Hazard Ratio
     h0 = np.clip(prob[:, :idx, :].mean(axis=1), safe_eps, 1.0 - safe_eps)
     h1 = np.clip(prob[:, idx:, :].mean(axis=1), safe_eps, 1.0 - safe_eps)
 
-    # Population marginal survival per draw across subjects
     s0 = sv[:, :idx, :].mean(axis=1)
     s1 = sv[:, idx:, :].mean(axis=1)
 
-    # 1. Time-varying Hazard Ratio via cloglog link: log(1 - h1) / log(1 - h0)
-    hr_raw = -np.log(1.0 - h1) / -np.log(1.0 - h0)
-    hr_by_time = np.clip(np.nan_to_num(hr_raw, nan=1.0, posinf=50.0, neginf=0.02), 0.02, 50.0)
+    hr_marginal_raw = -np.log(1.0 - h1) / -np.log(1.0 - h0)
+    hr_marginal_by_time = np.clip(np.nan_to_num(hr_marginal_raw, nan=1.0, posinf=50.0, neginf=0.02), 0.02, 50.0)
 
-    # 2. Time-varying raw discrete risk ratio: h1 / h0 (not averaged across time)
+    # 2. Subject-Specific Conditional Hazard Ratio (individual contrast per draw and time)
+    # Shape: (n_draws, N_subjects, n_times)
+    p0_ind = np.clip(prob[:, :idx, :], safe_eps, 1.0 - safe_eps)
+    p1_ind = np.clip(prob[:, idx:, :], safe_eps, 1.0 - safe_eps)
+    ind_cloglog_raw = -np.log(1.0 - p1_ind) / -np.log(1.0 - p0_ind)
+    ind_cloglog_clipped = np.clip(np.nan_to_num(ind_cloglog_raw, nan=1.0, posinf=50.0, neginf=0.02), 0.02, 50.0)
+    ind_log_hr = np.log(ind_cloglog_clipped)
+
+    # Average across subjects (geometric mean on ratio scale = mean on log-hazard scale)
+    cond_log_hr_by_time = ind_log_hr.mean(axis=1)
+    cond_hr_by_time = np.exp(cond_log_hr_by_time)
+
+    # 3. Time-varying raw discrete risk ratio: h1 / h0 (not averaged across time)
     discrete_raw = h1 / h0
     discrete_rr_by_time = np.clip(np.nan_to_num(discrete_raw, nan=1.0, posinf=50.0, neginf=0.02), 0.02, 50.0)
 
@@ -1589,49 +1597,79 @@ def compute_hazard_and_risk_difference(
         else:
             w = np.ones(n_times, dtype=np.float64) / n_times
 
-    # 3. Event-weighted summary Hazard Ratio (Cox-aligned geometric mean across intervals)
-    log_hr = np.log(hr_by_time)
-    weighted_log_hr_draws = np.dot(log_hr, w)
-    weighted_hr_draws = np.exp(weighted_log_hr_draws)
+    # Event-weighted Marginal Hazard Ratio draws (Cox-aligned geometric mean across intervals)
+    log_hr_marginal = np.log(hr_marginal_by_time)
+    weighted_marginal_log_hr_draws = np.dot(log_hr_marginal, w)
+    weighted_marginal_hr_draws = np.exp(weighted_marginal_log_hr_draws)
 
-    # 4. Unweighted summary Hazard Ratio (geometric across time intervals)
-    unweighted_log_hr_draws = np.mean(log_hr, axis=1)
-    unweighted_hr_draws = np.exp(unweighted_log_hr_draws)
+    # Event-weighted Conditional Hazard Ratio draws
+    weighted_cond_log_hr_draws = np.dot(cond_log_hr_by_time, w)
+    weighted_cond_hr_draws = np.exp(weighted_cond_log_hr_draws)
 
-    # 5. Risk Difference (1 over 0: excess event risk): Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t)
+    # Unweighted draws across time intervals
+    unweighted_marginal_log_hr_draws = np.mean(log_hr_marginal, axis=1)
+    unweighted_marginal_hr_draws = np.exp(unweighted_marginal_log_hr_draws)
+    unweighted_cond_log_hr_draws = np.mean(cond_log_hr_by_time, axis=1)
+    unweighted_cond_hr_draws = np.exp(unweighted_cond_log_hr_draws)
+
+    # Risk Difference (1 over 0: excess event risk): Risk_1(t) - Risk_0(t) = S_0(t) - S_1(t)
     rd_by_time = s0 - s1
     surv_diff_by_time = s1 - s0
 
-    # 6. Summary Risk Differences
     weighted_rd_draws = np.dot(rd_by_time, w)
     unweighted_rd_draws = rd_by_time.mean(axis=1)
     horizon_rd_draws = rd_by_time[:, -1]
 
-    # 7. Restricted Mean Survival Time (RMST) Difference
+    # Restricted Mean Survival Time (RMST) Difference
     rmst_diff_draws = surv_diff_by_time.sum(axis=1)
 
+    tot_marg_hr = float(np.exp(np.mean(weighted_marginal_log_hr_draws)))
+    tot_marg_ci = np.quantile(weighted_marginal_hr_draws, qntile).tolist()
+    tot_cond_hr = float(np.exp(np.mean(weighted_cond_log_hr_draws)))
+    tot_cond_ci = np.quantile(weighted_cond_hr_draws, qntile).tolist()
+
     return {
-        # Summary Hazard Ratios (Cox-aligned posterior expectation of log-hazard ratio)
-        "hazard_ratio_weighted_mean": float(np.exp(np.mean(weighted_log_hr_draws))),
-        "hazard_ratio_weighted_geometric_mean": float(np.exp(np.mean(weighted_log_hr_draws))),
-        "hazard_ratio_weighted_median": float(np.median(weighted_hr_draws)),
-        "hazard_ratio_weighted_arithmetic_mean": float(np.mean(weighted_hr_draws)),
-        "hazard_ratio_weighted_ci": np.quantile(weighted_hr_draws, qntile).tolist(),
-        "hazard_ratio_weighted_draws": weighted_hr_draws,
-        "hazard_ratio_unweighted_mean": float(np.exp(np.mean(unweighted_log_hr_draws))),
-        "hazard_ratio_unweighted_geometric_mean": float(np.exp(np.mean(unweighted_log_hr_draws))),
-        "hazard_ratio_unweighted_median": float(np.median(unweighted_hr_draws)),
-        "hazard_ratio_unweighted_arithmetic_mean": float(np.mean(unweighted_hr_draws)),
-        "hazard_ratio_unweighted_ci": np.quantile(unweighted_hr_draws, qntile).tolist(),
-        "hazard_ratio_unweighted_draws": unweighted_hr_draws,
-        # Time-varying HR and discrete risk ratio curves
-        "hazard_ratio_curve_mean": np.round(hr_by_time.mean(axis=0), 3),
-        "hazard_ratio_curve_ci": np.round(np.quantile(hr_by_time, qntile, axis=0), 3),
-        "hazard_ratio_curve_draws": hr_by_time,
+        # --- Total Marginal Causal Hazard Ratio (Population Policy Contrast) ---
+        "total_marginal_hr": tot_marg_hr,
+        "total_marginal_hr_ci": tot_marg_ci,
+        "total_marginal_hr_draws": weighted_marginal_hr_draws,
+        "total_marginal_hr_curve": np.round(hr_marginal_by_time.mean(axis=0), 3),
+        "total_marginal_hr_curve_ci": np.round(np.quantile(hr_marginal_by_time, qntile, axis=0), 3),
+
+        # --- Total Conditional Causal Hazard Ratio (Subject-Specific Individual Contrast) ---
+        "total_conditional_hr": tot_cond_hr,
+        "total_conditional_hr_ci": tot_cond_ci,
+        "total_conditional_hr_draws": weighted_cond_hr_draws,
+        "total_conditional_hr_curve": np.round(cond_hr_by_time.mean(axis=0), 3),
+        "total_conditional_hr_curve_ci": np.round(np.quantile(cond_hr_by_time, qntile, axis=0), 3),
+
+        # --- Explicit Named Aliases ---
+        "marginal_hazard_ratio_weighted_mean": tot_marg_hr,
+        "marginal_hazard_ratio_weighted_ci": tot_marg_ci,
+        "conditional_hazard_ratio_weighted_mean": tot_cond_hr,
+        "conditional_hazard_ratio_weighted_ci": tot_cond_ci,
+
+        # --- Backward-Compatibility Aliases ---
+        "hazard_ratio_weighted_mean": tot_marg_hr,
+        "hazard_ratio_weighted_geometric_mean": tot_marg_hr,
+        "hazard_ratio_weighted_median": float(np.median(weighted_marginal_hr_draws)),
+        "hazard_ratio_weighted_arithmetic_mean": float(np.mean(weighted_marginal_hr_draws)),
+        "hazard_ratio_weighted_ci": tot_marg_ci,
+        "hazard_ratio_weighted_draws": weighted_marginal_hr_draws,
+        "hazard_ratio_curve_mean": np.round(hr_marginal_by_time.mean(axis=0), 3),
+        "hazard_ratio_curve_ci": np.round(np.quantile(hr_marginal_by_time, qntile, axis=0), 3),
+        "hazard_ratio_curve_draws": hr_marginal_by_time,
+        "hazard_ratio_unweighted_mean": float(np.exp(np.mean(unweighted_marginal_log_hr_draws))),
+        "hazard_ratio_unweighted_geometric_mean": float(np.exp(np.mean(unweighted_marginal_log_hr_draws))),
+        "hazard_ratio_unweighted_median": float(np.median(unweighted_marginal_hr_draws)),
+        "hazard_ratio_unweighted_arithmetic_mean": float(np.mean(unweighted_marginal_hr_draws)),
+        "hazard_ratio_unweighted_ci": np.quantile(unweighted_marginal_hr_draws, qntile).tolist(),
+        "hazard_ratio_unweighted_draws": unweighted_marginal_hr_draws,
+
+        # --- Risk Differences & Counterfactual Survival Curves ---
         "discrete_risk_ratio_mean": np.round(discrete_rr_by_time.mean(axis=0), 3),
         "discrete_risk_ratio_ci": np.round(np.quantile(discrete_rr_by_time, qntile, axis=0), 3),
         "discrete_risk_ratio_draws": discrete_rr_by_time,
-        # Risk Differences (1 over 0: excess event risk)
         "risk_difference_mean": np.round(rd_by_time.mean(axis=0), 3),
         "risk_difference_ci": np.round(np.quantile(rd_by_time, qntile, axis=0), 3),
         "risk_difference_draws": rd_by_time,
@@ -1641,7 +1679,6 @@ def compute_hazard_and_risk_difference(
         "risk_difference_unweighted_ci": np.quantile(unweighted_rd_draws, qntile).tolist(),
         "risk_difference_horizon_mean": float(np.mean(horizon_rd_draws)),
         "risk_difference_horizon_ci": np.quantile(horizon_rd_draws, qntile).tolist(),
-        # Marginal Counterfactual Survival Curves S1(t) and S0(t)
         "survival_1_mean": np.round(s1.mean(axis=0), 3),
         "survival_1_ci": np.round(np.quantile(s1, qntile, axis=0), 3),
         "survival_0_mean": np.round(s0.mean(axis=0), 3),
@@ -1650,17 +1687,13 @@ def compute_hazard_and_risk_difference(
         "s1_curve_ci": np.round(np.quantile(s1, qntile, axis=0), 3),
         "s0_curve_mean": np.round(s0.mean(axis=0), 3),
         "s0_curve_ci": np.round(np.quantile(s0, qntile, axis=0), 3),
-        # Survival Difference (S1 - S0)
         "survival_difference_mean": np.round(surv_diff_by_time.mean(axis=0), 3),
         "survival_difference_ci": np.round(np.quantile(surv_diff_by_time, qntile, axis=0), 3),
-        # Restricted Mean Survival Time Difference
         "rmst_difference_mean": float(np.mean(rmst_diff_draws)),
         "rmst_difference_ci": np.quantile(rmst_diff_draws, qntile).tolist(),
-        # Weights used
         "event_weights": w,
-        # Backward compatibility aliases
-        "hazard_ratio_mean": np.round(hr_by_time.mean(axis=0), 3),
-        "hazard_ratio_ci": np.round(np.quantile(hr_by_time, qntile, axis=0), 3),
+        "hazard_ratio_mean": np.round(hr_marginal_by_time.mean(axis=0), 3),
+        "hazard_ratio_ci": np.round(np.quantile(hr_marginal_by_time, qntile, axis=0), 3),
         "difference_mean": np.round(surv_diff_by_time.mean(axis=0), 3),
         "difference_ci": np.round(np.quantile(surv_diff_by_time, qntile, axis=0), 3),
     }
