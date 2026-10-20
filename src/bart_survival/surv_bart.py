@@ -44,7 +44,7 @@ class BartSurvModel:
     cutpoints (512 resolution), MCMC thinning, and support-audited Causal G-Computation.
     """
     _model_type = "BART_Survival"
-    version = "0.2.1"
+    version = "0.2.2"
 
     def __init__(
         self,

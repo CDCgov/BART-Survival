@@ -16,7 +16,10 @@ import numpy as np
 import math
 import pymc as pm
 import pymc_bart as pmb
-from pymc_bart.pgbart import PGBART
+try:
+    from pymc_bart.pgbart import PGBART
+except ImportError:
+    from pymc_bart import PGBART
 from numba import njit, prange
 import scipy as sp
 
