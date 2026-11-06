@@ -1,4 +1,7 @@
 graft src
 graft tests
+prune src/bart_survival/__pycache__
 global-exclude __pycache__
 global-exclude *.py[cod]
+global-exclude *.nb[ci]
+global-exclude .DS_Store
